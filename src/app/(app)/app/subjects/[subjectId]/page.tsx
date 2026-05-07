@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useConcepts, useUpdateConceptField, useUpdateConceptContent, useIncrementReview, useDecrementReview, useDeleteConcept } from '@/hooks/useConcepts'
-import { useSubjects, useTopics, useTags, useSubjectSortMode, useSetSubjectSortMode, useSubjectConceptOrder, useMoveConceptInSubject } from '@/hooks/useSubjects'
+import { useSubjects, useTopics, useSubtopics, useTags, useSubjectSortMode, useSetSubjectSortMode, useSubjectConceptOrder, useMoveConceptInSubject } from '@/hooks/useSubjects'
 import { useSidebarState } from '@/components/providers/SidebarStateProvider'
 import { useViewStateRegistry } from '@/components/providers/ViewStateRegistryProvider'
 import FilterSortBar from '@/components/ui/FilterSortBar'
@@ -31,7 +31,7 @@ const LAST_ID_KEY = (sid: string) => `subject-last-id-${sid}`
 const STATE_KEY   = (sid: string) => `subject-state-${sid}`
 const getMain = () => document.getElementById('main-content')
 
-const EMPTY_FILTERS: FilterState = { topics: [], tags: [], states: [], priorities: [], pinned: false }
+const EMPTY_FILTERS: FilterState = { topics: [], subtopics: [], tags: [], states: [], priorities: [], pinned: false }
 
 function isEditableTarget(e: KeyboardEvent) {
   const t = e.target as HTMLElement
@@ -54,6 +54,7 @@ export default function SubjectView() {
   const { data: allConcepts = [] } = useConcepts()
   const { data: subjects = [] } = useSubjects()
   const { data: topics = [] } = useTopics()
+  const { data: subtopics = [] } = useSubtopics()
   const { data: tags = [] } = useTags()
   const { data: sortMode = 'alpha' } = useSubjectSortMode(subjectId)
   const { data: subjectOrder = [] } = useSubjectConceptOrder(subjectId)
@@ -94,8 +95,8 @@ export default function SubjectView() {
   function clearFilters() { setFiltersState(EMPTY_FILTERS) }
 
   const hasActiveFilters = Boolean(
-    filters.topics?.length || filters.tags?.length || filters.states?.length ||
-    filters.priorities?.length || filters.pinned
+    filters.topics?.length || filters.subtopics?.length || filters.tags?.length ||
+    filters.states?.length || filters.priorities?.length || filters.pinned
   )
 
   // Registry ref: inline assignment keeps closure fresh every render.
@@ -119,7 +120,8 @@ export default function SubjectView() {
 
   const displayed = useMemo(() => {
     const filtered = subjectConcepts.filter((c) => {
-      if (filters.topics?.length && !filters.topics.some((id) => c.topicIds.includes(id))) return false
+      if (filters.topics?.length && !filters.topics.some((id) => c.topicId === id)) return false
+      if (filters.subtopics?.length && !filters.subtopics.some((id) => c.subtopicId === id)) return false
       if (filters.tags?.length && !filters.tags.some((id) => c.tagIds.includes(id))) return false
       if (filters.states?.length && !filters.states.includes(c.state ?? 'NEW')) return false
       if (filters.priorities?.length && !filters.priorities.includes(c.priority ?? 'MEDIUM')) return false
@@ -327,9 +329,10 @@ export default function SubjectView() {
         clearFilters={clearFilters}
         hasActiveFilters={hasActiveFilters}
         topics={topics}
+        subtopics={subtopics}
         tags={tags}
         availableSorts={SUBJECT_AVAILABLE_SORTS}
-        availableFilters={['topic', 'tag', 'state', 'priority', 'pinned']}
+        availableFilters={['topic', 'subtopic', 'tag', 'state', 'priority', 'pinned']}
         sortLabels={SUBJECT_SORT_LABELS}
         resultCount={displayed.length}
       />

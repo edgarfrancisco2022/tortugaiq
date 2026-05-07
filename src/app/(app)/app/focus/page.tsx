@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useConcepts, useUpdateConceptField, useUpdateConceptContent, useIncrementReview, useDecrementReview } from '@/hooks/useConcepts'
-import { useSubjects, useTopics, useTags } from '@/hooks/useSubjects'
+import { useSubjects, useTopics, useSubtopics, useTags } from '@/hooks/useSubjects'
 import { useFilterSort } from '@/hooks/useFilterSort'
 import { useViewStateRegistry } from '@/components/providers/ViewStateRegistryProvider'
 import FilterSortBar from '@/components/ui/FilterSortBar'
@@ -39,6 +39,7 @@ function FocusMode() {
   const { data: allConcepts = [] } = useConcepts()
   const { data: subjects = [] } = useSubjects()
   const { data: topics = [] } = useTopics()
+  const { data: subtopics = [] } = useSubtopics()
   const { data: tags = [] } = useTags()
   const updateFieldMut = useUpdateConceptField()
   const updateContentMut = useUpdateConceptContent()
@@ -243,6 +244,7 @@ function FocusMode() {
         hasActiveFilters={hasActiveFilters}
         subjects={subjects}
         topics={topics}
+        subtopics={subtopics}
         tags={tags}
         resultCount={filtered.length}
       />

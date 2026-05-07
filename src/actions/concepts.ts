@@ -1,15 +1,15 @@
 'use server'
 
-import { and, eq, inArray, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm'
 import { auth } from '@/auth'
 import { db } from '@/db'
 import {
   concepts,
   conceptSubjects,
   conceptTags,
-  conceptTopics,
   subjects,
   subjectConceptOrders,
+  subtopics,
   tags,
   topics,
 } from '@/db/schema'
@@ -34,7 +34,7 @@ async function requireAuth(): Promise<string> {
 async function resolveOrCreate(
   userId: string,
   names: string[],
-  table: typeof subjects | typeof topics | typeof tags
+  table: typeof subjects | typeof topics | typeof subtopics | typeof tags
 ): Promise<string[]> {
   if (names.length === 0) return []
 
@@ -64,7 +64,7 @@ async function resolveOrCreate(
   }
 
   if (toInsert.length > 0) {
-    const inserted = await db
+    await db
       .insert(table)
       .values(toInsert)
       .onConflictDoNothing()
@@ -97,12 +97,12 @@ async function resolveOrCreate(
 }
 
 // ---------------------------------------------------------------------------
-// Prune orphaned subjects/topics/tags for a user
+// Prune orphaned subjects/topics/subtopics/tags for a user
 // (rows no longer referenced by any concept)
 // ---------------------------------------------------------------------------
 
 async function pruneOrphans(userId: string): Promise<void> {
-  // Subjects with no concepts
+  // Subjects with no concepts (via junction table)
   const usedSubjectIds = db
     .select({ subjectId: conceptSubjects.subjectId })
     .from(conceptSubjects)
@@ -118,12 +118,11 @@ async function pruneOrphans(userId: string): Promise<void> {
       )
     )
 
-  // Topics
+  // Topics no longer referenced by any concept's topic_id FK
   const usedTopicIds = db
-    .select({ topicId: conceptTopics.topicId })
-    .from(conceptTopics)
-    .innerJoin(concepts, eq(concepts.id, conceptTopics.conceptId))
-    .where(eq(concepts.userId, userId))
+    .selectDistinct({ topicId: concepts.topicId })
+    .from(concepts)
+    .where(and(eq(concepts.userId, userId), isNotNull(concepts.topicId)))
 
   await db
     .delete(topics)
@@ -134,7 +133,22 @@ async function pruneOrphans(userId: string): Promise<void> {
       )
     )
 
-  // Tags
+  // Subtopics no longer referenced by any concept's subtopic_id FK
+  const usedSubtopicIds = db
+    .selectDistinct({ subtopicId: concepts.subtopicId })
+    .from(concepts)
+    .where(and(eq(concepts.userId, userId), isNotNull(concepts.subtopicId)))
+
+  await db
+    .delete(subtopics)
+    .where(
+      and(
+        eq(subtopics.userId, userId),
+        sql`${subtopics.id} NOT IN (${usedSubtopicIds})`
+      )
+    )
+
+  // Tags with no concepts (via junction table)
   const usedTagIds = db
     .select({ tagId: conceptTags.tagId })
     .from(conceptTags)
@@ -152,46 +166,33 @@ async function pruneOrphans(userId: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Shape raw DB rows into Concept interface
+// Attach junction data (subjects and tags only — topics/subtopics are direct FKs)
 // ---------------------------------------------------------------------------
 
 async function attachJunctions(
   userId: string,
   conceptIds: string[]
-): Promise<
-  Map<
-    string,
-    { subjectIds: string[]; topicIds: string[]; tagIds: string[] }
-  >
-> {
+): Promise<Map<string, { subjectIds: string[]; tagIds: string[] }>> {
   if (conceptIds.length === 0) return new Map()
 
-  const [cs, ct, ctg] = await Promise.all([
+  const [cs, ctg] = await Promise.all([
     db
       .select({ conceptId: conceptSubjects.conceptId, subjectId: conceptSubjects.subjectId })
       .from(conceptSubjects)
       .where(inArray(conceptSubjects.conceptId, conceptIds)),
-    db
-      .select({ conceptId: conceptTopics.conceptId, topicId: conceptTopics.topicId })
-      .from(conceptTopics)
-      .where(inArray(conceptTopics.conceptId, conceptIds)),
     db
       .select({ conceptId: conceptTags.conceptId, tagId: conceptTags.tagId })
       .from(conceptTags)
       .where(inArray(conceptTags.conceptId, conceptIds)),
   ])
 
-  const map = new Map<
-    string,
-    { subjectIds: string[]; topicIds: string[]; tagIds: string[] }
-  >()
+  const map = new Map<string, { subjectIds: string[]; tagIds: string[] }>()
 
   for (const id of conceptIds) {
-    map.set(id, { subjectIds: [], topicIds: [], tagIds: [] })
+    map.set(id, { subjectIds: [], tagIds: [] })
   }
 
   for (const row of cs) map.get(row.conceptId)?.subjectIds.push(row.subjectId)
-  for (const row of ct) map.get(row.conceptId)?.topicIds.push(row.topicId)
   for (const row of ctg) map.get(row.conceptId)?.tagIds.push(row.tagId)
 
   return map
@@ -215,7 +216,7 @@ export async function getConcepts(): Promise<Concept[]> {
 
   return rows.map((row) => ({
     ...row,
-    ...(junctions.get(row.id) ?? { subjectIds: [], topicIds: [], tagIds: [] }),
+    ...(junctions.get(row.id) ?? { subjectIds: [], tagIds: [] }),
   }))
 }
 
@@ -231,22 +232,30 @@ export async function getConcept(id: string): Promise<Concept | null> {
   if (!row) return null
 
   const junctions = await attachJunctions(userId, [id])
-  const junction = junctions.get(id) ?? { subjectIds: [], topicIds: [], tagIds: [] }
+  const junction = junctions.get(id) ?? { subjectIds: [], tagIds: [] }
 
-  // Also fetch names for the concept view
-  const [subjectRows, topicRows, tagRows] = await Promise.all([
+  // Fetch names for the concept view
+  const [subjectRows, topicRow, subtopicRow, tagRows] = await Promise.all([
     junction.subjectIds.length > 0
       ? db
           .select({ id: subjects.id, name: subjects.name })
           .from(subjects)
           .where(inArray(subjects.id, junction.subjectIds))
       : Promise.resolve([]),
-    junction.topicIds.length > 0
+    row.topicId
       ? db
-          .select({ id: topics.id, name: topics.name })
+          .select({ name: topics.name })
           .from(topics)
-          .where(inArray(topics.id, junction.topicIds))
-      : Promise.resolve([]),
+          .where(eq(topics.id, row.topicId))
+          .then((r) => r[0] ?? null)
+      : Promise.resolve(null),
+    row.subtopicId
+      ? db
+          .select({ name: subtopics.name })
+          .from(subtopics)
+          .where(eq(subtopics.id, row.subtopicId))
+          .then((r) => r[0] ?? null)
+      : Promise.resolve(null),
     junction.tagIds.length > 0
       ? db
           .select({ id: tags.id, name: tags.name })
@@ -259,8 +268,9 @@ export async function getConcept(id: string): Promise<Concept | null> {
     ...row,
     ...junction,
     subjectNames: subjectRows.map((r) => r.name),
-    topicNames: topicRows.map((r) => r.name),
     tagNames: tagRows.map((r) => r.name),
+    topicName: topicRow?.name ?? null,
+    subtopicName: subtopicRow?.name ?? null,
   }
 }
 
@@ -268,11 +278,15 @@ export async function createConcept(input: ConceptInput): Promise<string> {
   const userId = await requireAuth()
   const parsed = conceptInputSchema.parse(input)
 
-  const [subjectIds, topicIds, tagIds] = await Promise.all([
+  const [subjectIds, resolvedTopicIds, resolvedSubtopicIds, tagIds] = await Promise.all([
     resolveOrCreate(userId, parsed.subjectNames, subjects),
-    resolveOrCreate(userId, parsed.topicNames, topics),
+    parsed.topicName ? resolveOrCreate(userId, [parsed.topicName], topics) : Promise.resolve([]),
+    parsed.subtopicName ? resolveOrCreate(userId, [parsed.subtopicName], subtopics) : Promise.resolve([]),
     resolveOrCreate(userId, parsed.tagNames, tags),
   ])
+
+  const topicId = resolvedTopicIds[0] ?? null
+  const subtopicId = resolvedSubtopicIds[0] ?? null
 
   const [concept] = await db
     .insert(concepts)
@@ -285,6 +299,8 @@ export async function createConcept(input: ConceptInput): Promise<string> {
       state: parsed.state,
       priority: parsed.priority,
       pinned: parsed.pinned,
+      topicId,
+      subtopicId,
     })
     .returning({ id: concepts.id })
 
@@ -297,12 +313,6 @@ export async function createConcept(input: ConceptInput): Promise<string> {
           .values(subjectIds.map((subjectId) => ({ conceptId, subjectId })))
           .onConflictDoNothing()
       : Promise.resolve(),
-    topicIds.length > 0
-      ? db
-          .insert(conceptTopics)
-          .values(topicIds.map((topicId) => ({ conceptId, topicId })))
-          .onConflictDoNothing()
-      : Promise.resolve(),
     tagIds.length > 0
       ? db
           .insert(conceptTags)
@@ -313,7 +323,6 @@ export async function createConcept(input: ConceptInput): Promise<string> {
 
   // Initialize subject_concept_orders for subjects that have custom sort mode
   if (subjectIds.length > 0) {
-    // Get max position per subject for custom-sorted subjects
     for (const subjectId of subjectIds) {
       const maxPos = await db
         .select({ pos: subjectConceptOrders.position })
@@ -327,7 +336,6 @@ export async function createConcept(input: ConceptInput): Promise<string> {
         .orderBy(sql`${subjectConceptOrders.position} DESC`)
         .limit(1)
 
-      // Only insert if there are existing order rows (i.e., subject is in custom mode)
       if (maxPos.length > 0) {
         await db
           .insert(subjectConceptOrders)
@@ -358,41 +366,42 @@ export async function updateConcept(id: string, input: ConceptInput): Promise<vo
 
   if (!existing) throw new Error('Not found')
 
-  // Get current junctions
+  // Get current subject/tag junctions
   const junctions = await attachJunctions(userId, [id])
-  const current = junctions.get(id) ?? { subjectIds: [], topicIds: [], tagIds: [] }
+  const current = junctions.get(id) ?? { subjectIds: [], tagIds: [] }
 
-  const [newSubjectIds, newTopicIds, newTagIds] = await Promise.all([
+  const [newSubjectIds, resolvedTopicIds, resolvedSubtopicIds, newTagIds] = await Promise.all([
     resolveOrCreate(userId, parsed.subjectNames, subjects),
-    resolveOrCreate(userId, parsed.topicNames, topics),
+    parsed.topicName ? resolveOrCreate(userId, [parsed.topicName], topics) : Promise.resolve([]),
+    parsed.subtopicName ? resolveOrCreate(userId, [parsed.subtopicName], subtopics) : Promise.resolve([]),
     resolveOrCreate(userId, parsed.tagNames, tags),
   ])
 
-  // Update concept row — only touch name and updatedAt.
+  const newTopicId = resolvedTopicIds[0] ?? null
+  const newSubtopicId = resolvedSubtopicIds[0] ?? null
+
+  // Update concept row — topic/subtopic are now direct FKs updated here.
   // Content fields (mvkNotes, markdownNotes, referencesMarkdown) are managed
   // by updateConceptContent; status fields (state, priority, pinned) are
-  // managed by updateConceptField. Overwriting them here would erase notes
-  // saved independently via the markdown editors.
+  // managed by updateConceptField.
   await db
     .update(concepts)
     .set({
       name: parsed.name,
+      topicId: newTopicId,
+      subtopicId: newSubtopicId,
       updatedAt: new Date(),
     })
     .where(and(eq(concepts.id, id), eq(concepts.userId, userId)))
 
-  // Diff and update junction tables
+  // Diff and update subject/tag junction tables
   const oldSubjectSet = new Set(current.subjectIds)
   const newSubjectSet = new Set(newSubjectIds)
-  const oldTopicSet = new Set(current.topicIds)
-  const newTopicSet = new Set(newTopicIds)
   const oldTagSet = new Set(current.tagIds)
   const newTagSet = new Set(newTagIds)
 
   const toAddSubjects = newSubjectIds.filter((sid) => !oldSubjectSet.has(sid))
   const toRemoveSubjects = current.subjectIds.filter((sid) => !newSubjectSet.has(sid))
-  const toAddTopics = newTopicIds.filter((tid) => !oldTopicSet.has(tid))
-  const toRemoveTopics = current.topicIds.filter((tid) => !newTopicSet.has(tid))
   const toAddTags = newTagIds.filter((tid) => !oldTagSet.has(tid))
   const toRemoveTags = current.tagIds.filter((tid) => !newTagSet.has(tid))
 
@@ -410,22 +419,6 @@ export async function updateConcept(id: string, input: ConceptInput): Promise<vo
             and(
               eq(conceptSubjects.conceptId, id),
               inArray(conceptSubjects.subjectId, toRemoveSubjects)
-            )
-          )
-      : Promise.resolve(),
-    toAddTopics.length > 0
-      ? db
-          .insert(conceptTopics)
-          .values(toAddTopics.map((topicId) => ({ conceptId: id, topicId })))
-          .onConflictDoNothing()
-      : Promise.resolve(),
-    toRemoveTopics.length > 0
-      ? db
-          .delete(conceptTopics)
-          .where(
-            and(
-              eq(conceptTopics.conceptId, id),
-              inArray(conceptTopics.topicId, toRemoveTopics)
             )
           )
       : Promise.resolve(),

@@ -9,11 +9,12 @@ import {
   subjectConceptOrders,
   subjectSortModes,
   subjects,
+  subtopics,
   topics,
   tags,
 } from '@/db/schema'
 import { sortModeSchema } from '@/lib/validations'
-import type { Subject, Topic, Tag, SubjectSortMode } from '@/lib/types'
+import type { Subject, Subtopic, Topic, Tag, SubjectSortMode } from '@/lib/types'
 
 async function requireAuth(): Promise<string> {
   const session = await auth()
@@ -28,6 +29,11 @@ async function requireAuth(): Promise<string> {
 export async function getTopics(): Promise<Topic[]> {
   const userId = await requireAuth()
   return db.select().from(topics).where(eq(topics.userId, userId)).orderBy(topics.name)
+}
+
+export async function getSubtopics(): Promise<Subtopic[]> {
+  const userId = await requireAuth()
+  return db.select().from(subtopics).where(eq(subtopics.userId, userId)).orderBy(subtopics.name)
 }
 
 export async function getTags(): Promise<Tag[]> {

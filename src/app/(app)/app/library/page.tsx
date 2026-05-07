@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useConcepts, useUpdateConceptField, useUpdateConceptContent, useIncrementReview, useDecrementReview, useDeleteConcept } from '@/hooks/useConcepts'
-import { useSubjects, useTopics, useTags } from '@/hooks/useSubjects'
+import { useSubjects, useTopics, useSubtopics, useTags } from '@/hooks/useSubjects'
 import { useSidebarState } from '@/components/providers/SidebarStateProvider'
 import { useFilterSort } from '@/hooks/useFilterSort'
 import { useViewStateRegistry } from '@/components/providers/ViewStateRegistryProvider'
@@ -47,6 +47,7 @@ export default function ListMode() {
   const { data: allConcepts = [] } = useConcepts()
   const { data: subjects = [] } = useSubjects()
   const { data: topics = [] } = useTopics()
+  const { data: subtopics = [] } = useSubtopics()
   const { data: tags = [] } = useTags()
   const updateFieldMut = useUpdateConceptField()
   const updateContentMut = useUpdateConceptContent()
@@ -288,6 +289,7 @@ export default function ListMode() {
         hasActiveFilters={hasActiveFilters}
         subjects={subjects}
         topics={topics}
+        subtopics={subtopics}
         tags={tags}
         resultCount={filtered.length}
       />

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useMemo, Fragment } from 'react'
 import { useRouter } from 'next/navigation'
 import { useConcepts, useUpdateConceptContent, useIncrementReview, useDecrementReview } from '@/hooks/useConcepts'
-import { useSubjects, useTopics, useTags } from '@/hooks/useSubjects'
+import { useSubjects, useTopics, useSubtopics, useTags } from '@/hooks/useSubjects'
 import { useSidebarState } from '@/components/providers/SidebarStateProvider'
 import { useFilterSort } from '@/hooks/useFilterSort'
 import { useViewStateRegistry } from '@/components/providers/ViewStateRegistryProvider'
@@ -130,6 +130,7 @@ export default function IndexMode() {
   const { data: allConcepts = [] } = useConcepts()
   const { data: subjects = [] } = useSubjects()
   const { data: topics = [] } = useTopics()
+  const { data: subtopics = [] } = useSubtopics()
   const { data: tags = [] } = useTags()
   const updateContentMut = useUpdateConceptContent()
   const incrementMut = useIncrementReview()
@@ -373,8 +374,9 @@ export default function IndexMode() {
         hasActiveFilters={hasActiveFilters}
         subjects={subjects}
         topics={topics}
+        subtopics={subtopics}
         tags={tags}
-        availableFilters={['subject', 'topic', 'tag', 'state', 'priority', 'pinned']}
+        availableFilters={['subject', 'topic', 'subtopic', 'tag', 'state', 'priority', 'pinned']}
         resultCount={filtered.length}
       />
 

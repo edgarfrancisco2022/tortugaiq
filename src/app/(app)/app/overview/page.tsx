@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useConcepts } from '@/hooks/useConcepts'
 import { useStudySessions } from '@/hooks/useStudySessions'
-import { useSubjects, useTopics, useTags } from '@/hooks/useSubjects'
+import { useSubjects, useTopics, useSubtopics, useTags } from '@/hooks/useSubjects'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -120,6 +120,7 @@ export default function OverviewPage() {
   const { data: studySessions = [] } = useStudySessions()
   const { data: subjects = [] } = useSubjects()
   const { data: topics = [] } = useTopics()
+  const { data: subtopics = [] } = useSubtopics()
   const { data: tags = [] } = useTags()
 
   // ── Study ──────────────────────────────────────────────────────────────────
@@ -209,7 +210,14 @@ export default function OverviewPage() {
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((t) => ({
       name: t.name,
-      value: `${concepts.filter((c) => c.topicIds.includes(t.id)).length} concepts`,
+      value: `${concepts.filter((c) => c.topicId === t.id).length} concepts`,
+    }))
+
+  const subtopicList = [...subtopics]
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((t) => ({
+      name: t.name,
+      value: `${concepts.filter((c) => c.subtopicId === t.id).length} concepts`,
     }))
 
   const tagList = [...tags]
@@ -265,10 +273,11 @@ export default function OverviewPage() {
       <section className="mb-10">
         <SectionTitle accent="emerald">Inventory</SectionTitle>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-3">
           <SummaryCard accent="emerald" value={concepts.length} label="Total Concepts" />
           <SummaryCard accent="emerald" value={subjects.length} label="Subjects" />
           <SummaryCard accent="emerald" value={topics.length} label="Topics" />
+          <SummaryCard accent="emerald" value={subtopics.length} label="Subtopics" />
           <SummaryCard accent="emerald" value={tags.length} label="Tags" />
         </div>
 
@@ -324,10 +333,11 @@ export default function OverviewPage() {
       {/* ── Section 3: Catalog ───────────────────────────────── */}
       <section className="mb-10">
         <SectionTitle>Catalog</SectionTitle>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <BreakdownList title="Subjects" items={subjectList} emptyText="No subjects yet" />
-          <BreakdownList title="Topics"   items={topicList}   emptyText="No topics yet" />
-          <BreakdownList title="Tags"     items={tagList}     emptyText="No tags yet" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <BreakdownList title="Subjects"  items={subjectList}  emptyText="No subjects yet" />
+          <BreakdownList title="Topics"    items={topicList}    emptyText="No topics yet" />
+          <BreakdownList title="Subtopics" items={subtopicList} emptyText="No subtopics yet" />
+          <BreakdownList title="Tags"      items={tagList}      emptyText="No tags yet" />
         </div>
       </section>
 

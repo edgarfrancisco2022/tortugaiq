@@ -18,6 +18,14 @@ export interface Topic {
   updatedAt: Date
 }
 
+export interface Subtopic {
+  id: string
+  userId: string
+  name: string
+  createdAt: Date
+  updatedAt: Date
+}
+
 export interface Tag {
   id: string
   userId: string
@@ -41,12 +49,15 @@ export interface Concept {
   updatedAt: Date
   // Joined fields (populated by query, not stored in concepts table)
   subjectIds: string[]
-  topicIds: string[]
   tagIds: string[]
+  // Direct FK fields (stored on concepts table)
+  topicId: string | null
+  subtopicId: string | null
   // Joined name fields (populated by getConcept single-concept query)
   subjectNames?: string[]
-  topicNames?: string[]
   tagNames?: string[]
+  topicName?: string | null
+  subtopicName?: string | null
 }
 
 export interface StudySession {
@@ -61,7 +72,8 @@ export interface StudySession {
 export interface ConceptInput {
   name: string
   subjectNames: string[]
-  topicNames: string[]
+  topicName: string | null
+  subtopicName: string | null
   tagNames: string[]
   mvkNotes?: string
   markdownNotes?: string

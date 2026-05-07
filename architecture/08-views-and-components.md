@@ -55,7 +55,7 @@ Displays all concepts belonging to a specific subject. The most feature-rich lis
 | `reviews_low` | Fewest reviews first |
 | `custom` | User-defined order; arrows visible |
 
-**Filter options:** topic, tag, state, priority, pinned
+**Filter options:** topic, subtopic, tag, state, priority, pinned
 
 **Custom sort arrows:** Only visible when mode is `'custom'` AND no filters are active. When filters are active, amber warning text explains why arrows are hidden (filtered results don't represent the full order).
 
@@ -108,10 +108,10 @@ All concepts, searchable and filterable. Client-side name search (no server call
 
 **Data hooks:**
 - `useConcepts()` — all concepts
-- `useSubjects()`, `useTopics()`, `useTags()` — for filter dropdowns
+- `useSubjects()`, `useTopics()`, `useSubtopics()`, `useTags()` — for filter dropdowns
 - `useFilterSort()` — client-side filter/sort state
 
-**Filter options:** subject, topic, tag, state, priority, pinned
+**Filter options:** subject, topic, subtopic, tag, state, priority, pinned
 
 **Search:** Text input filters by concept name (case-insensitive substring match). Purely client-side — no debounce needed since no network call.
 

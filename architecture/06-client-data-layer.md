@@ -134,7 +134,7 @@ export function useConcept(id: string) {
 
     // Instead of showing a loading spinner when navigating from Library to ConceptView,
     // immediately populate from the list cache. The network request still runs in the
-    // background to get the full names (subjectNames, topicNames, tagNames).
+    // background to get the full names (subjectNames, topicName, subtopicName, tagNames).
     initialData: () => {
       const list = qc.getQueryData<Concept[]>(['concepts'])
       const concept = list?.find((c) => c.id === id)
@@ -161,9 +161,9 @@ export function useConcept(id: string) {
 Without `initialData`: you navigate to ConceptView → spinner → data loads → concept renders.
 With `initialData`: you navigate to ConceptView → concept renders immediately from cache → background fetch silently updates if stale.
 
-### `useSubjects()`, `useTopics()`, `useTags()` — Taxonomy Queries
+### `useSubjects()`, `useTopics()`, `useSubtopics()`, `useTags()` — Taxonomy Queries
 
-Simple queries for the full lists of subjects, topics, tags. Used by ConceptForm's multi-selects and by ConceptView to resolve names.
+Simple queries for the full lists of subjects, topics, subtopics, and tags. Used by ConceptForm's single-selects (topic/subtopic) and multi-selects (subjects/tags), and by filter dropdowns across all views.
 
 ### `useSubjectSortMode(subjectId)` and `useSetSubjectSortMode()`
 
@@ -328,7 +328,7 @@ After each mutation, the following query keys are invalidated:
 | `setSubjectSortMode` | `['subject-sort-mode', subjectId]`, `['subject-concept-order', subjectId]` |
 | `moveConceptInSubject` | `['subject-concept-order', subjectId]` |
 
-Subjects/topics/tags are invalidated after concept create/update/delete because `resolveOrCreate` and `pruneOrphans` may add or remove taxonomy items.
+Subjects/topics/subtopics/tags are invalidated after concept create/update/delete because `resolveOrCreate` and `pruneOrphans` may add or remove taxonomy items. Topics and subtopics are now stored as direct FKs on the concept row, but the taxonomy lists (`['topics']`, `['subtopics']`) still need invalidation because `pruneOrphans` may delete orphaned entries.
 
 ---
 
@@ -338,8 +338,8 @@ The `useFilterSort` hook (`src/hooks/useFilterSort.ts`) handles filtering and so
 
 ```typescript
 export function useFilterSort(concepts: Concept[], options?: UseFilterSortOptions) {
-  const [filters, setFiltersState] = useState<ActiveFilters>({
-    subjectIds: [], topicIds: [], tagIds: [],
+  const [filters, setFiltersState] = useState<FilterState>({
+    subjects: [], topics: [], subtopics: [], tags: [],
     states: [], priorities: [],
     pinned: false,
   })

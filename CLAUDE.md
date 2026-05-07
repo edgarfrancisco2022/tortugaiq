@@ -96,6 +96,13 @@ export interface Topic {
   createdAt: Date;
   updatedAt: Date;
 }
+export interface Subtopic {
+  id: string;
+  userId: string;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
 export interface Tag {
   id: string;
   userId: string;
@@ -117,13 +124,16 @@ export interface Concept {
   pinned: boolean;
   createdAt: Date;
   updatedAt: Date;
+  // Direct FKs (stored on concepts row)
+  topicId: string | null;
+  subtopicId: string | null;
   // Joined fields (populated by query, not stored in concepts table)
   subjectIds: string[];
-  topicIds: string[];
   tagIds: string[];
   // Only populated by getConcept (single-concept queries)
   subjectNames?: string[];
-  topicNames?: string[];
+  topicName?: string | null;
+  subtopicName?: string | null;
   tagNames?: string[];
 }
 
@@ -139,7 +149,8 @@ export interface StudySession {
 export interface ConceptInput {
   name: string;
   subjectNames: string[];
-  topicNames: string[];
+  topicName: string | null;
+  subtopicName: string | null;
   tagNames: string[];
   // Optional fields — used when creating with pre-filled content
   mvkNotes?: string;
@@ -162,10 +173,10 @@ export interface ConceptInput {
 | `password_reset_tokens`  | Password recovery flow                                                                                   |
 | `subjects`               | User subjects — unique `(userId, name)` constraint                                                       |
 | `topics`                 | User topics — unique `(userId, name)`                                                                    |
+| `subtopics`              | User subtopics — unique `(userId, name)`; same shape as `topics`                                         |
 | `tags`                   | User tags — unique `(userId, name)`                                                                      |
-| `concepts`               | Core entity                                                                                              |
+| `concepts`               | Core entity; `topic_id` and `subtopic_id` are nullable FKs (ON DELETE SET NULL) — many-to-one           |
 | `concept_subjects`       | M:M concept ↔ subject (cascade delete)                                                                   |
-| `concept_topics`         | M:M concept ↔ topic (cascade delete)                                                                     |
 | `concept_tags`           | M:M concept ↔ tag (cascade delete)                                                                       |
 | `subject_concept_orders` | Custom sort positions per `(userId, subjectId, conceptId)`                                               |
 | `subject_sort_modes`     | Sort mode preference per `(userId, subjectId)` — full 7-value enum matching `SubjectSortMode`            |
@@ -214,7 +225,7 @@ Renders: `Sidebar` (fixed left, collapsible) + `StudySessionBar` (fixed top) + `
 ### SubjectView (`/app/subjects/[subjectId]`)
 
 - Sort modes: `alpha`, `alpha_desc`, `date_new`, `date_old`, `reviews_high`, `reviews_low`, `custom`
-- Filters: topic, tag, state, priority, pinned
+- Filters: topic, subtopic, tag, state, priority, pinned
 - Keyboard (outside inputs): `↑↓` navigate rows, `Enter` open, `Space` toggle MVK drawer, `+/=` increment review, `-` decrement review, `Backspace` back
 - Custom sort arrows only visible when mode is `custom` AND no filters active; show amber warning when filters active
 - Back navigation restores scroll, focused row, and filter state from `sessionStorage`
@@ -229,7 +240,7 @@ Renders: `Sidebar` (fixed left, collapsible) + `StudySessionBar` (fixed top) + `
 
 - Client-side name search (no DB call on each keystroke)
 - Sort: same 7-mode set as SubjectView
-- Filters: subject, topic, tag, state, priority, pinned
+- Filters: subject, topic, subtopic, tag, state, priority, pinned
 - Keyboard: same as SubjectView (`↑↓`, `Enter`, `Space` MVK, `+/-`, `Backspace`)
 - Back navigation preserves state
 
@@ -248,8 +259,8 @@ Renders: `Sidebar` (fixed left, collapsible) + `StudySessionBar` (fixed top) + `
 
 ### OverviewView (`/app/overview`)
 
-- Three sections: Study (total time, sessions, reviews), Inventory (state distribution, recent), Catalog (subjects/topics/tags with counts)
-- Server Component; no keyboard shortcuts
+- Three sections: Study (total time, sessions, reviews), Inventory (state distribution, recent), Catalog (subjects/topics/subtopics/tags with counts)
+- Client Component; no keyboard shortcuts
 
 ### SessionsPage (`/app/sessions`)
 
@@ -333,12 +344,13 @@ Never accept `userId` from the client. Never skip the ownership check.
 
 ### `subjects.ts`
 
-This file owns subjects, topics, and tags — all three are fetched here.
+This file owns subjects, topics, subtopics, and tags — all four are fetched here.
 
 | Action                                                  | Description                                                                                     |
 | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | `getSubjects()`                                         | All subjects for user with concept count (LEFT JOIN aggregation)                                |
 | `getTopics()`                                           | All topics for user, ordered by name                                                            |
+| `getSubtopics()`                                        | All subtopics for user, ordered by name                                                         |
 | `getTags()`                                             | All tags for user, ordered by name                                                              |
 | `getSubjectSortMode(subjectId)`                         | Returns `SubjectSortMode`; defaults to `'alpha'` if not set                                     |
 | `setSubjectSortMode(subjectId, mode)`                   | Upsert; if switching to `'custom'`, initialize `subject_concept_orders` with current date order |
@@ -383,6 +395,9 @@ Server Components call Server Actions directly for initial render. Client Compon
 | `useDecrementReview()`             | -1 `reviewCount` (floor 0), optimistic                                                                                     |
 | `useDeleteConcept()`               | Deletes concept                                                                                                            |
 | `useSubjects()`                    | Subjects with concept counts                                                                                               |
+| `useTopics()`                      | All topics for user                                                                                                        |
+| `useSubtopics()`                   | All subtopics for user                                                                                                     |
+| `useTags()`                        | All tags for user                                                                                                          |
 | `useSubjectSortMode(id)`           | Sort mode for a subject                                                                                                    |
 | `useSetSubjectSortMode(id)`        | Set sort mode; invalidates order queries on change                                                                         |
 | `useSubjectConceptOrder(id)`       | Custom concept order for a subject                                                                                         |

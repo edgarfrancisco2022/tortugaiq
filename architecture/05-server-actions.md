@@ -100,7 +100,7 @@ Think of this like `@Valid` + Bean Validation in Spring Boot — the annotation 
 
 #### `getConcepts() → Promise<Concept[]>`
 
-Fetches all concepts for the authenticated user with their junction data (subject/topic/tag IDs).
+Fetches all concepts for the authenticated user with their junction data (subject/tag IDs). `topicId` and `subtopicId` come directly from the concept row — no junction query needed for them.
 
 ```typescript
 export async function getConcepts(): Promise<Concept[]> {
@@ -114,14 +114,15 @@ export async function getConcepts(): Promise<Concept[]> {
     .where(eq(concepts.userId, userId))
     .orderBy(asc(concepts.name))
 
-  // Attach M:M junction data in a batch query
+  // Attach M:M junction data (subjects and tags only — topic/subtopic are direct FKs)
   const ids = rows.map((r) => r.id)
   const junctionMap = await attachJunctions(userId, ids)
 
   return rows.map((r) => ({
     ...r,
+    topicId:    r.topicId,    // direct FK on the row
+    subtopicId: r.subtopicId, // direct FK on the row
     subjectIds: junctionMap.get(r.id)?.subjectIds ?? [],
-    topicIds:   junctionMap.get(r.id)?.topicIds ?? [],
     tagIds:     junctionMap.get(r.id)?.tagIds ?? [],
   }))
 }
@@ -135,24 +136,24 @@ Single concept with full junction data INCLUDING names (not just IDs). Used by C
 
 The most complex action. Steps:
 1. Validate input with Zod
-2. `resolveOrCreate()` subjects, topics, tags by name
-3. Insert concept row
-4. Insert junction rows (conceptSubjects, conceptTopics, conceptTags)
+2. `resolveOrCreate()` subjects and tags by name; resolve topic/subtopic by name (single string, not array)
+3. Insert concept row with `topicId`/`subtopicId` set directly
+4. Insert junction rows for subjects and tags (`conceptSubjects`, `conceptTags`)
 5. If any subject uses custom sort mode, append new concept to its order list
 6. Return new concept ID
 
 #### `updateConcept(id, input) → Promise<void>`
 
-Updates concept name and M:M relationships. Steps:
+Updates concept name, `topicId`/`subtopicId` FKs, and M:M relationships (subjects, tags). Steps:
 1. Verify ownership
-2. Update concept name
-3. Diff old junctions vs new → add new ones, remove dropped ones
+2. Update concept row — name, `topicId`, `subtopicId` directly
+3. Diff old subject/tag junctions vs new → add new ones, remove dropped ones
 4. Update sort orders for affected subjects
-5. `pruneOrphans()` — clean up any now-unreferenced subjects/topics/tags
+5. `pruneOrphans()` — clean up any now-unreferenced subjects/topics/subtopics/tags
 
 #### `deleteConcept(id) → Promise<void>`
 
-Deletes concept (FK cascade removes junctions). Then `pruneOrphans()`.
+Deletes concept (FK cascade removes junction rows; `topic_id`/`subtopic_id` become irrelevant). Then `pruneOrphans()`.
 
 #### `updateConceptField(id, field, value) → Promise<void>`
 
@@ -392,39 +393,46 @@ The `onConflictDoNothing()` handles race conditions: if two concurrent requests 
 
 ### `attachJunctions(userId, conceptIds) → Promise<Map>`
 
-Batch-fetches all M:M junction rows for a list of concept IDs in parallel:
+Batch-fetches all M:M junction rows for a list of concept IDs in parallel. Only subjects and tags use junction tables — topics and subtopics are direct FKs on the concept row and are not fetched here.
 
 ```typescript
-const [subjectRows, topicRows, tagRows] = await Promise.all([
+const [subjectRows, tagRows] = await Promise.all([
   db.select().from(conceptSubjects).where(inArray(conceptSubjects.conceptId, conceptIds)),
-  db.select().from(conceptTopics).where(inArray(conceptTopics.conceptId, conceptIds)),
   db.select().from(conceptTags).where(inArray(conceptTags.conceptId, conceptIds)),
 ])
 
-// Build Map<conceptId, { subjectIds, topicIds, tagIds }>
+// Build Map<conceptId, { subjectIds, tagIds }>
 ```
 
-This avoids N+1 queries — instead of fetching junctions for each concept separately, all junctions for all concepts are fetched in 3 queries total.
+This avoids N+1 queries — all junctions for all concepts are fetched in 2 queries total.
 
 ### `pruneOrphans(userId) → Promise<void>`
 
-Deletes subjects, topics, and tags no longer referenced by any concept:
+Deletes subjects, topics, subtopics, and tags no longer referenced by any concept:
 
 ```typescript
 // Delete subjects where no conceptSubjects row references them
 await db.delete(subjects).where(
+  and(eq(subjects.userId, userId), notInArray(subjects.id, ...conceptSubjects subquery))
+)
+// Delete topics not referenced by any concept's topic_id
+await db.delete(topics).where(
   and(
-    eq(subjects.userId, userId),
+    eq(topics.userId, userId),
     notInArray(
-      subjects.id,
-      db.select({ id: conceptSubjects.subjectId }).from(conceptSubjects)
+      topics.id,
+      db.selectDistinct({ topicId: concepts.topicId })
+        .from(concepts)
+        .where(and(eq(concepts.userId, userId), isNotNull(concepts.topicId)))
     )
   )
 )
-// Same pattern for topics and tags (run in parallel with Promise.all)
+// Same pattern for subtopics (subtopic_id column)
+// Same pattern for tags (concept_tags junction)
+// All four run in parallel with Promise.all
 ```
 
-This runs after `deleteConcept` and after `updateConcept` (when subjects/topics/tags are removed from a concept). It keeps the taxonomy clean automatically.
+This runs after `deleteConcept` and after `updateConcept`. It keeps the taxonomy clean automatically — no orphaned topics or subtopics remain after their last concept is updated or deleted.
 
 ---
 

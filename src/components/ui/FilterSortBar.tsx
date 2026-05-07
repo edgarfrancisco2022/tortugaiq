@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { PinIcon } from './StatusBadge'
-import type { ConceptState, ConceptPriority, Subject, Topic, Tag } from '@/lib/types'
+import type { ConceptState, ConceptPriority, Subject, Subtopic, Topic, Tag } from '@/lib/types'
 
 export const SORT_LABELS: Record<string, string> = {
   alpha: 'A → Z',
@@ -32,6 +32,7 @@ const PRIORITY_DOT: Record<ConceptPriority, string> = {
 export interface FilterState {
   subjects?: string[]
   topics?: string[]
+  subtopics?: string[]
   tags?: string[]
   states?: string[]
   priorities?: string[]
@@ -185,6 +186,7 @@ interface Props {
   hasActiveFilters: boolean
   subjects?: (Subject & { conceptCount?: number })[]
   topics?: Topic[]
+  subtopics?: Subtopic[]
   tags?: Tag[]
   availableSorts?: string[]
   availableFilters?: string[]
@@ -201,14 +203,16 @@ export default function FilterSortBar({
   hasActiveFilters,
   subjects = [],
   topics = [],
+  subtopics = [],
   tags = [],
   availableSorts = Object.keys(SORT_LABELS),
-  availableFilters = ['subject', 'topic', 'tag', 'state', 'priority', 'pinned'],
+  availableFilters = ['subject', 'topic', 'subtopic', 'tag', 'state', 'priority', 'pinned'],
   sortLabels = SORT_LABELS,
   resultCount,
 }: Props) {
   const ss = [...subjects].sort((a, b) => a.name.localeCompare(b.name))
   const st = [...topics].sort((a, b) => a.name.localeCompare(b.name))
+  const sst = [...subtopics].sort((a, b) => a.name.localeCompare(b.name))
   const sg = [...tags].sort((a, b) => a.name.localeCompare(b.name))
   const sortSelectRef = useRef<HTMLSelectElement>(null)
 
@@ -261,6 +265,16 @@ export default function FilterSortBar({
           selected={filters.topics || []}
           onToggle={(v) => toggle('topics', v)}
           onClear={() => setFilter('topics', [])}
+        />
+      )}
+
+      {availableFilters.includes('subtopic') && sst.length > 0 && (
+        <MultiSelectFilter
+          label="Subtopics"
+          options={sst.map((t) => ({ value: t.id, label: t.name }))}
+          selected={filters.subtopics || []}
+          onToggle={(v) => toggle('subtopics', v)}
+          onClear={() => setFilter('subtopics', [])}
         />
       )}
 

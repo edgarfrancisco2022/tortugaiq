@@ -140,6 +140,23 @@ export const tags = pgTable(
   (t) => [unique().on(t.userId, t.name)]
 )
 
+export const subtopics = pgTable(
+  'subtopics',
+  {
+    id: text('id')
+      .notNull()
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique().on(t.userId, t.name)]
+)
+
 export const concepts = pgTable('concepts', {
   id: text('id')
     .notNull()
@@ -162,6 +179,8 @@ export const concepts = pgTable('concepts', {
     .default('MEDIUM'),
   reviewCount: integer('review_count').notNull().default(0),
   pinned: boolean('pinned').notNull().default(false),
+  topicId: text('topic_id').references(() => topics.id, { onDelete: 'set null' }),
+  subtopicId: text('subtopic_id').references(() => subtopics.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
@@ -179,19 +198,6 @@ export const conceptSubjects = pgTable(
       .references(() => subjects.id, { onDelete: 'cascade' }),
   },
   (t) => [primaryKey({ columns: [t.conceptId, t.subjectId] })]
-)
-
-export const conceptTopics = pgTable(
-  'concept_topics',
-  {
-    conceptId: text('concept_id')
-      .notNull()
-      .references(() => concepts.id, { onDelete: 'cascade' }),
-    topicId: text('topic_id')
-      .notNull()
-      .references(() => topics.id, { onDelete: 'cascade' }),
-  },
-  (t) => [primaryKey({ columns: [t.conceptId, t.topicId] })]
 )
 
 export const conceptTags = pgTable(

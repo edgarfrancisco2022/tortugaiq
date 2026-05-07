@@ -45,8 +45,8 @@ export function useConcept(id: string) {
       return {
         ...concept,
         subjectNames: allSubjects.filter((s) => concept.subjectIds.includes(s.id)).map((s) => s.name),
-        topicNames:   allTopics.filter((t)   => concept.topicIds.includes(t.id)).map((t) => t.name),
-        tagNames:     allTags.filter((t)     => concept.tagIds.includes(t.id)).map((t) => t.name),
+        topicName:    allTopics.find((t) => t.id === concept.topicId)?.name ?? null,
+        tagNames:     allTags.filter((t) => concept.tagIds.includes(t.id)).map((t) => t.name),
       }
     },
     initialDataUpdatedAt: () => qc.getQueryState(['concepts'])?.dataUpdatedAt,

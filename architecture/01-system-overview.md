@@ -22,10 +22,12 @@ Users do NOT get quiz prompts. They navigate manually, track their own progress,
 graph LR
     User -->|owns| Subject
     User -->|owns| Topic
+    User -->|owns| Subtopic
     User -->|owns| Tag
     User -->|owns| Concept
     Concept -->|belongs to many| Subject
-    Concept -->|belongs to many| Topic
+    Concept -->|has one| Topic
+    Concept -->|has one| Subtopic
     Concept -->|belongs to many| Tag
     User -->|logs| StudySession
     StudySession -.->|optionally linked to| Subject
@@ -37,9 +39,11 @@ graph LR
 
 **Subject** — a broad category (e.g., "Machine Learning", "Mathematics"). Concepts belong to multiple subjects. Subjects have custom sort orders and sort mode preferences.
 
-**Topic** — a more granular grouping (e.g., "Gradient Descent", "Linear Algebra"). Cross-cuts subjects. A concept on "backpropagation" might be in subject "Machine Learning" and topic "Gradient Descent".
+**Topic** — a single-level grouping below Subject (e.g., "Gradient Descent", "Linear Algebra"). Each concept has **at most one** topic (stored as a direct FK on the concept row). A concept on "backpropagation" might be in subject "Machine Learning" with topic "Gradient Descent".
 
-**Tag** — freeform labels (e.g., "important", "needs-review"). No hierarchy.
+**Subtopic** — an optional second level of granularity below Topic (e.g., "Vanishing Gradients", "LU Decomposition"). Like Topic, each concept has **at most one** subtopic (direct FK). Used for finer classification to support the Outline feature.
+
+**Tag** — freeform labels (e.g., "important", "needs-review"). No hierarchy. M:M — a concept can have many tags.
 
 **StudySession** — a log entry: how many minutes the user studied, optionally linked to a subject.
 
@@ -172,7 +176,8 @@ It was then rebuilt as a **Next.js production application** in a single repo, ke
 The production app was built feature by feature:
 1. Auth (credentials + Google)
 2. Core concept CRUD (create, read, update, delete)
-3. Subjects, topics, tags (with M:M relationships)
+3. Subjects, topics, tags (subjects and tags M:M; topics many-to-one FK)
+3a. Subtopics entity added; topic changed from M:M junction to direct FK on concepts (migration 0004)
 4. Multiple view modes (Library, Focus, Index)
 5. Study session tracking
 6. MVK drawer and keyboard navigation

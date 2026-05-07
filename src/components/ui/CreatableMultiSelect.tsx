@@ -15,6 +15,7 @@ interface Props {
   onChange: (value: string[]) => void
   placeholder?: string
   onTabNext?: () => void
+  single?: boolean
 }
 
 const CreatableMultiSelect = forwardRef<CreatableMultiSelectHandle, Props>(function CreatableMultiSelect({
@@ -25,7 +26,9 @@ const CreatableMultiSelect = forwardRef<CreatableMultiSelectHandle, Props>(funct
   onChange,
   placeholder = 'Select or type to create...',
   onTabNext,
+  single = false,
 }: Props, ref) {
+  const isFull = single && selected.length >= 1
   const [input, setInput] = useState('')
   const [isOpen, setIsOpen] = useState(false)
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 })
@@ -78,6 +81,7 @@ const CreatableMultiSelect = forwardRef<CreatableMultiSelectHandle, Props>(funct
   }, [])
 
   function open() {
+    if (isFull) return
     updatePos()
     setIsOpen(true)
     requestAnimationFrame(() => searchInputRef.current?.focus())
@@ -210,8 +214,12 @@ const CreatableMultiSelect = forwardRef<CreatableMultiSelectHandle, Props>(funct
       <div
         ref={triggerRef}
         tabIndex={0}
-        className={`min-h-[34px] border rounded-md px-2 py-1 flex flex-wrap gap-1 items-center cursor-pointer transition-colors bg-white select-none focus:outline-none ${
-          isOpen ? 'border-blue-500' : 'border-gray-300 hover:border-gray-400 focus:border-blue-500'
+        className={`min-h-[34px] border rounded-md px-2 py-1 flex flex-wrap gap-1 items-center transition-colors bg-white select-none focus:outline-none ${
+          isFull
+            ? 'border-gray-200 bg-gray-50 cursor-default'
+            : isOpen
+              ? 'border-blue-500 cursor-pointer'
+              : 'border-gray-300 hover:border-gray-400 focus:border-blue-500 cursor-pointer'
         }`}
         onClick={open}
         onKeyDown={(e) => {
@@ -252,17 +260,21 @@ const CreatableMultiSelect = forwardRef<CreatableMultiSelectHandle, Props>(funct
         {selected.length === 0 && (
           <span className="flex-1 text-sm text-gray-400 py-0.5">{placeholder}</span>
         )}
-        <svg
-          viewBox="0 0 10 6"
-          fill="none"
-          className={`w-2.5 h-2.5 text-gray-400 flex-shrink-0 ml-auto transition-transform ${isOpen ? 'rotate-180' : ''}`}
-          stroke="currentColor"
-          strokeWidth="1.75"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M1 1l4 4 4-4" />
-        </svg>
+        {isFull ? (
+          <span className="text-xs text-gray-400 ml-auto italic">remove to change</span>
+        ) : (
+          <svg
+            viewBox="0 0 10 6"
+            fill="none"
+            className={`w-2.5 h-2.5 text-gray-400 flex-shrink-0 ml-auto transition-transform ${isOpen ? 'rotate-180' : ''}`}
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M1 1l4 4 4-4" />
+          </svg>
+        )}
       </div>
 
       {dropdown}

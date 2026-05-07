@@ -126,11 +126,15 @@ export default function ConceptView() {
               ))}
             </MetaRow>
           )}
-          <MetaRow label="Topics">
-            {concept.topicNames && concept.topicNames.length > 0
-              ? concept.topicNames.map((name) => (
-                  <Chip key={name} cls="bg-blue-50 text-blue-700">{name}</Chip>
-                ))
+          <MetaRow label="Topic">
+            {concept.topicName
+              ? <Chip cls="bg-blue-50 text-blue-700">{concept.topicName}</Chip>
+              : <span className="text-xs text-gray-300 italic">None</span>
+            }
+          </MetaRow>
+          <MetaRow label="Subtopic">
+            {concept.subtopicName
+              ? <Chip cls="bg-violet-50 text-violet-700">{concept.subtopicName}</Chip>
               : <span className="text-xs text-gray-300 italic">None</span>
             }
           </MetaRow>

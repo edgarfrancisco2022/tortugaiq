@@ -143,11 +143,13 @@ Used by Auth.js for email verification flows. Not actively used in this app (no 
 
 **`subjects`** — User-defined categories (unique constraint: `userId + name`)
 
-**`topics`** — User-defined subcategories (unique constraint: `userId + name`)
+**`topics`** — Single-level groupings below subjects (unique constraint: `userId + name`)
+
+**`subtopics`** — Second-level groupings below topics (unique constraint: `userId + name`). Same shape as `topics`. Added in migration `0004`.
 
 **`tags`** — Freeform labels (unique constraint: `userId + name`)
 
-All three have the same shape: `id`, `userId` (FK cascade), `name`, `createdAt`, `updatedAt`. The unique constraint per user means two users can have a subject named "Mathematics" without conflict, but a single user cannot have two subjects with the same name.
+All four have the same shape: `id`, `userId` (FK cascade), `name`, `createdAt`, `updatedAt`. The unique constraint per user means two users can have a topic named "Calculus" without conflict, but a single user cannot have two topics with the same name.
 
 **`concepts`** — The core entity
 
@@ -163,18 +165,22 @@ All three have the same shape: `id`, `userId` (FK cascade), `name`, `createdAt`,
 | `priority` | text enum | `LOW\|MEDIUM\|HIGH` |
 | `review_count` | integer | Self-reported review count; defaults to 0 |
 | `pinned` | boolean | Pinned flag; defaults to false |
+| `topic_id` | text FK → topics nullable | **SET NULL** on topic delete; at most one topic per concept |
+| `subtopic_id` | text FK → subtopics nullable | **SET NULL** on subtopic delete; at most one subtopic per concept |
 | `created_at` | timestamp tz | |
 | `updated_at` | timestamp tz | Updated on any change |
+
+`topic_id` and `subtopic_id` were added in migration `0004`, replacing the old `concept_topics` M:M junction table. Each concept now has **at most one** topic and **at most one** subtopic, stored directly on the concept row.
 
 ### Junction Tables (Many-to-Many)
 
 **`concept_subjects`** — Links concepts to subjects (composite PK: `conceptId + subjectId`)
 
-**`concept_topics`** — Links concepts to topics (composite PK: `conceptId + topicId`)
-
 **`concept_tags`** — Links concepts to tags (composite PK: `conceptId + tagId`)
 
 Both sides cascade delete: if a concept is deleted, its junction rows go. If a subject is deleted, its junction rows go. Orphan pruning (see [05 — Server Actions](./05-server-actions.md)) then removes the subject if nothing references it.
+
+> **Note:** `concept_topics` (the old M:M junction for topics) was removed in migration `0004`. Topics are now a direct FK on the `concepts` row, not a junction table.
 
 ### Ordering Tables
 
@@ -250,6 +256,11 @@ erDiagram
         text user_id FK
         text name
     }
+    subtopics {
+        text id PK
+        text user_id FK
+        text name
+    }
     tags {
         text id PK
         text user_id FK
@@ -264,14 +275,12 @@ erDiagram
         text priority
         integer review_count
         boolean pinned
+        text topic_id FK
+        text subtopic_id FK
     }
     concept_subjects {
         text concept_id FK
         text subject_id FK
-    }
-    concept_topics {
-        text concept_id FK
-        text topic_id FK
     }
     concept_tags {
         text concept_id FK
@@ -299,11 +308,13 @@ erDiagram
     users ||--o{ password_reset_tokens : "reset tokens"
     users ||--o{ subjects : owns
     users ||--o{ topics : owns
+    users ||--o{ subtopics : owns
     users ||--o{ tags : owns
     users ||--o{ concepts : owns
     users ||--o{ study_sessions : logs
     concepts }o--o{ subjects : "via concept_subjects"
-    concepts }o--o{ topics : "via concept_topics"
+    concepts }o--|| topics : "topic_id FK (nullable)"
+    concepts }o--|| subtopics : "subtopic_id FK (nullable)"
     concepts }o--o{ tags : "via concept_tags"
     subjects ||--o{ subject_concept_orders : "custom order"
     subjects ||--o{ subject_sort_modes : "sort preference"
@@ -423,6 +434,7 @@ git push
 | `0001_clammy_argent.sql` | Add `WITH TIME ZONE` to timestamp columns |
 | `0002_clever_drax.sql` | Fix concepts table timestamp defaults |
 | `0003_nervous_molecule_man.sql` | Add `is_guest` boolean to users table |
+| `0004_topic_fk_subtopics.sql` | Add `topic_id`/`subtopic_id` FKs to `concepts`; create `subtopics` table; data-migrate existing topic assignments; drop `concept_topics` junction table |
 
 Each migration is stored in `src/db/migrations/` and committed to git. The `meta/` subfolder contains Drizzle's internal snapshot JSON files that track the schema state.
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import CreatableMultiSelect, { type CreatableMultiSelectHandle } from './CreatableMultiSelect'
-import { useSubjects, useTopics, useTags } from '@/hooks/useSubjects'
+import { useSubjects, useTopics, useSubtopics, useTags } from '@/hooks/useSubjects'
 import { useCreateConcept, useUpdateConcept } from '@/hooks/useConcepts'
 import type { Concept } from '@/lib/types'
 
@@ -14,13 +14,14 @@ interface Props {
 
 /**
  * Handles both Add (concept=null) and Edit (concept=existing) modes.
- * In edit mode, resolves IDs → names using the subjects/topics/tags queries.
+ * In edit mode, resolves IDs → names using the subjects/topics/subtopics/tags queries.
  */
 export default function ConceptForm({ concept = null, onClose, onDone }: Props) {
   const isEdit = Boolean(concept)
 
   const { data: allSubjects = [] } = useSubjects()
   const { data: allTopics = [] } = useTopics()
+  const { data: allSubtopics = [] } = useSubtopics()
   const { data: allTags = [] } = useTags()
 
   const createMutation = useCreateConcept()
@@ -30,16 +31,20 @@ export default function ConceptForm({ concept = null, onClose, onDone }: Props) 
   const initSubjects = isEdit
     ? allSubjects.filter((s) => concept!.subjectIds.includes(s.id)).map((s) => s.name)
     : []
-  const initTopics = isEdit
-    ? allTopics.filter((t) => concept!.topicIds.includes(t.id)).map((t) => t.name)
-    : []
+  const initTopic: string | null = isEdit && concept!.topicId
+    ? allTopics.find((t) => t.id === concept!.topicId)?.name ?? null
+    : null
+  const initSubtopic: string | null = isEdit && concept!.subtopicId
+    ? allSubtopics.find((t) => t.id === concept!.subtopicId)?.name ?? null
+    : null
   const initTags = isEdit
     ? allTags.filter((t) => concept!.tagIds.includes(t.id)).map((t) => t.name)
     : []
 
   const [name, setName] = useState(isEdit ? concept!.name : '')
   const [selSubjects, setSelSubjects] = useState<string[]>(initSubjects)
-  const [selTopics, setSelTopics] = useState<string[]>(initTopics)
+  const [selTopic, setSelTopic] = useState<string | null>(initTopic)
+  const [selSubtopic, setSelSubtopic] = useState<string | null>(initSubtopic)
   const [selTags, setSelTags] = useState<string[]>(initTags)
   const [error, setError] = useState('')
 
@@ -62,9 +67,10 @@ export default function ConceptForm({ concept = null, onClose, onDone }: Props) 
 
   const pending = createMutation.isPending || updateMutation.isPending
   const backdropMouseDownRef = useRef(false)
-  const topicRef  = useRef<CreatableMultiSelectHandle>(null)
-  const tagsRef   = useRef<CreatableMultiSelectHandle>(null)
-  const cancelRef = useRef<HTMLButtonElement>(null)
+  const topicRef    = useRef<CreatableMultiSelectHandle>(null)
+  const subtopicRef = useRef<CreatableMultiSelectHandle>(null)
+  const tagsRef     = useRef<CreatableMultiSelectHandle>(null)
+  const cancelRef   = useRef<HTMLButtonElement>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -80,7 +86,8 @@ export default function ConceptForm({ concept = null, onClose, onDone }: Props) 
     const input = {
       name: name.trim(),
       subjectNames: selSubjects,
-      topicNames: selTopics,
+      topicName: selTopic,
+      subtopicName: selSubtopic,
       tagNames: selTags,
     }
 
@@ -167,10 +174,22 @@ export default function ConceptForm({ concept = null, onClose, onDone }: Props) 
             <CreatableMultiSelect
               ref={topicRef}
               label="Topic"
+              single
               options={allTopics.map((t) => t.name)}
-              selected={selTopics}
-              onChange={setSelTopics}
+              selected={selTopic ? [selTopic] : []}
+              onChange={(arr) => setSelTopic(arr[arr.length - 1] ?? null)}
               placeholder="Select or create topic..."
+              onTabNext={() => subtopicRef.current?.focus()}
+            />
+
+            <CreatableMultiSelect
+              ref={subtopicRef}
+              label="Subtopic"
+              single
+              options={allSubtopics.map((t) => t.name)}
+              selected={selSubtopic ? [selSubtopic] : []}
+              onChange={(arr) => setSelSubtopic(arr[arr.length - 1] ?? null)}
+              placeholder="Select or create subtopic..."
               onTabNext={() => tagsRef.current?.focus()}
             />
 

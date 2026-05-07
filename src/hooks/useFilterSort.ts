@@ -39,6 +39,7 @@ export function sortConcepts(concepts: Concept[], sort: string): Concept[] {
 export interface FilterState {
   subjects?: string[]
   topics?: string[]
+  subtopics?: string[]
   tags?: string[]
   states?: ConceptState[]
   priorities?: ConceptPriority[]
@@ -49,7 +50,9 @@ function filterConcepts(concepts: Concept[], filters: FilterState): Concept[] {
   return concepts.filter((c) => {
     if (filters.subjects?.length && !filters.subjects.some((id) => c.subjectIds.includes(id)))
       return false
-    if (filters.topics?.length && !filters.topics.some((id) => c.topicIds.includes(id)))
+    if (filters.topics?.length && !filters.topics.some((id) => c.topicId === id))
+      return false
+    if (filters.subtopics?.length && !filters.subtopics.some((id) => c.subtopicId === id))
       return false
     if (filters.tags?.length && !filters.tags.some((id) => c.tagIds.includes(id)))
       return false
@@ -64,6 +67,7 @@ function filterConcepts(concepts: Concept[], filters: FilterState): Concept[] {
 const EMPTY_FILTERS: FilterState = {
   subjects: [],
   topics: [],
+  subtopics: [],
   tags: [],
   states: [],
   priorities: [],
@@ -96,6 +100,7 @@ export function useFilterSort(
   const hasActiveFilters = Boolean(
     filters.subjects?.length ||
       filters.topics?.length ||
+      filters.subtopics?.length ||
       filters.tags?.length ||
       filters.states?.length ||
       filters.priorities?.length ||

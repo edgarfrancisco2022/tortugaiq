@@ -4,13 +4,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   getSubjects,
   getTopics,
+  getSubtopics,
   getTags,
   getSubjectSortMode,
   setSubjectSortMode,
   getSubjectConceptOrder,
   moveConceptInSubject,
 } from '@/actions/subjects'
-import type { Subject, Topic, Tag, SubjectSortMode } from '@/lib/types'
+import type { Subject, Subtopic, Topic, Tag, SubjectSortMode } from '@/lib/types'
 
 export type SubjectWithCount = Subject & { conceptCount: number }
 
@@ -25,6 +26,13 @@ export function useTopics() {
   return useQuery<Topic[]>({
     queryKey: ['topics'],
     queryFn: () => getTopics(),
+  })
+}
+
+export function useSubtopics() {
+  return useQuery<Subtopic[]>({
+    queryKey: ['subtopics'],
+    queryFn: () => getSubtopics(),
   })
 }
 
