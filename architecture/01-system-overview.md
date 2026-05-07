@@ -119,7 +119,7 @@ Drizzle felt closer to writing SQL (which aligns with a Java/Spring developer's 
 
 ### Auth.js v5 (instead of building from scratch)
 
-OAuth 2.0 (Google, Facebook) requires handling redirect flows, token exchange, PKCE, state parameters, and secure storage — dozens of edge cases. Auth.js handles all of this. Think of it like Spring Security's OAuth2 auto-configuration: you configure providers, it handles the plumbing.
+OAuth 2.0 (Google) requires handling redirect flows, token exchange, PKCE, state parameters, and secure storage — dozens of edge cases. Auth.js handles all of this. Think of it like Spring Security's OAuth2 auto-configuration: you configure providers, it handles the plumbing.
 
 The v5 (beta) was chosen because it works natively with Next.js App Router and Server Actions. The stable v4 has App Router friction.
 
@@ -170,7 +170,7 @@ The app started as a **Vite + React demo** — a frontend-only prototype to vali
 It was then rebuilt as a **Next.js production application** in a single repo, keeping the same UI ideas but replacing the entire architecture underneath. This is why the `docs/updates/` folder contains `demo-v2.x.md` files — those describe the Vite-era feature progression, and `docs/production-planning/` documents describe the transition plan.
 
 The production app was built feature by feature:
-1. Auth (credentials + Google + Facebook)
+1. Auth (credentials + Google)
 2. Core concept CRUD (create, read, update, delete)
 3. Subjects, topics, tags (with M:M relationships)
 4. Multiple view modes (Library, Focus, Index)

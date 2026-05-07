@@ -4,7 +4,6 @@
 
 Authentication is handled by **Auth.js v5** (formerly NextAuth.js). It manages:
 - Sign-in via Google OAuth
-- Sign-in via Facebook OAuth
 - Sign-in via email + password (Credentials provider)
 - JWT-based session storage
 - Guest (demo) accounts with 30-day TTL
@@ -66,7 +65,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     verificationTokensTable: verificationTokens,
   }),
   session: { strategy: 'jwt' },
-  providers: [ Google(...), Facebook(...), Credentials(...) ],
+  providers: [ Google(...), Credentials(...) ],
   pages: { signIn: '/sign-in', error: '/sign-in' },
   callbacks: { jwt(...), session(...) },
 })
@@ -150,12 +149,7 @@ sequenceDiagram
 Google requires you to configure the callback URL in Google Cloud Console:
 `https://yourdomain.com/api/auth/callback/google`
 
-### 2. Facebook OAuth
-
-Same pattern as Google. Configured in Facebook Developer App:
-`https://yourdomain.com/api/auth/callback/facebook`
-
-### 3. Credentials Provider
+### 2. Credentials Provider
 
 The custom email + password flow:
 

@@ -54,8 +54,6 @@ AUTH_SECRET=                # openssl rand -base64 32
 AUTH_URL=                   # http://localhost:3000 (dev) | production URL (prod)
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
-FACEBOOK_CLIENT_ID=
-FACEBOOK_CLIENT_SECRET=
 RESEND_API_KEY=
 CRON_SECRET=                # secret used to authenticate Vercel cron requests
 ```
@@ -133,7 +131,7 @@ Every user-owned table has `userId` as a non-nullable FK to `users.id ON DELETE 
 | `/notes` | NotesView | Static blog list |
 | `/notes/[slug]` | PostView | Blog post |
 | `/privacy` | PrivacyPage | Static privacy policy |
-| `/sign-in` | SignInPage | Credentials + Google + Facebook |
+| `/sign-in` | SignInPage | Credentials + Google |
 | `/sign-up` | SignUpPage | Registration |
 | `/forgot-password` | ForgotPasswordPage | Request reset email |
 | `/forgot-password/reset` | ResetPasswordPage | Token validation + new password |
@@ -464,7 +462,7 @@ Posts in `src/posts/*.md` with YAML frontmatter (`title`, `date`). `src/lib/post
 1. Create Vercel project; set root directory to repo root (leave empty)
 2. Link Neon database via Vercel integration (auto-sets `DATABASE_URL`)
 3. Set remaining env vars in Vercel project settings (including `CRON_SECRET`)
-4. Configure OAuth callback URLs: `https://<domain>/api/auth/callback/google`, `.../facebook`
+4. Configure OAuth callback URL: `https://<domain>/api/auth/callback/google`
 5. Run `npx drizzle-kit migrate` against production Neon branch before first deploy
 6. Deploy via `git push` (Vercel auto-deploys from main branch)
 

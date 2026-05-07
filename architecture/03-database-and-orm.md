@@ -116,7 +116,7 @@ These tables exist because Auth.js needs them. Their column names must match exa
 
 **`accounts`** — OAuth provider linkages (composite PK: `provider + providerAccountId`)
 
-Stores the OAuth tokens from Google/Facebook. When a user signs in with Google, Auth.js creates a row here linking their `userId` to their Google account ID. Cascades delete when user is deleted.
+Stores the OAuth tokens from Google. When a user signs in with Google, Auth.js creates a row here linking their `userId` to their Google account ID. Cascades delete when user is deleted.
 
 **`sessions`** — Auth.js session table (present but NOT used for session lookups)
 

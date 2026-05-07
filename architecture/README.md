@@ -28,7 +28,6 @@ graph TB
 
     subgraph External
         GOOGLE[Google OAuth]
-        FB[Facebook OAuth]
         RESEND[Resend Email API]
     end
 
@@ -38,7 +37,6 @@ graph TB
     RSC -->|direct function call| SA
     SA -->|Drizzle ORM| PGB --> DB
     API -->|OAuth callbacks| GOOGLE
-    API -->|OAuth callbacks| FB
     SA -->|password reset emails| RESEND
     CRON -->|DELETE guest users| API
     RSC -->|HTML + RSC payload| Browser

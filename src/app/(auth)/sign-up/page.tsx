@@ -4,7 +4,7 @@ import { useActionState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { signIn, useSession } from 'next-auth/react'
 import Link from 'next/link'
-import { signUpAction, signUpWithGoogle /*, signUpWithFacebook */ } from './actions'
+import { signUpAction, signUpWithGoogle } from './actions'
 import Logo from '@/components/ui/Logo'
 import GuestLink from '@/components/landing/GuestLink'
 
@@ -73,19 +73,6 @@ export default function SignUpPage() {
               Sign up with Google
             </button>
           </form>
-          {/* Facebook signup — disabled until Meta business verification is complete
-          <form action={signUpWithFacebook}>
-            <button
-              type="submit"
-              className="w-full flex items-center justify-center gap-2 border border-gray-200 rounded-lg py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden="true" fill="#1877F2">
-                <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.514c-1.491 0-1.956.93-1.956 1.874v2.25h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z" />
-              </svg>
-              Sign up with Facebook
-            </button>
-          </form>
-          */}
         </div>
 
         <div className="relative mb-5">

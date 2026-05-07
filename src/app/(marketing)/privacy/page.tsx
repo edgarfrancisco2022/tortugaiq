@@ -39,7 +39,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-base font-semibold text-gray-900 mb-2">What we collect</h2>
             <p>
-              When you create an account or sign in with Google or Facebook, we receive your name and
+              When you create an account or sign in with Google, we receive your name and
               email address from that provider. If you register with email and password, we store your
               name, email, and a hashed version of your password. We never store your password in plain text.
             </p>
@@ -62,7 +62,6 @@ export default function PrivacyPage() {
             <p>We use the following third-party services to operate the app:</p>
             <ul className="mt-2 space-y-1 list-disc list-inside text-gray-500">
               <li>Google OAuth — for sign-in</li>
-              <li>Facebook Login — for sign-in</li>
               <li>Neon — PostgreSQL database hosting</li>
               <li>Vercel — application hosting</li>
             </ul>

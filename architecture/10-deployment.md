@@ -106,8 +106,6 @@ Set in Vercel project settings (Production + Preview environments):
 | `AUTH_URL` | Public URL of the app | `https://yourdomain.com` |
 | `GOOGLE_CLIENT_ID` | Google OAuth app client ID | Google Cloud Console → Credentials |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth app secret | Google Cloud Console → Credentials |
-| `FACEBOOK_CLIENT_ID` | Facebook app ID | Facebook Developer Dashboard |
-| `FACEBOOK_CLIENT_SECRET` | Facebook app secret | Facebook Developer Dashboard |
 | `RESEND_API_KEY` | Resend API key | Resend dashboard → API Keys |
 | `RESEND_FROM_EMAIL` | Verified sender email — must be on a domain verified in Resend | e.g. `noreply@yourdomain.com` |
 | `CRON_SECRET` | Secret for cron endpoint auth | `openssl rand -base64 32` |
@@ -125,14 +123,6 @@ Local development: copy these to `.env.local` (never commit this file).
 3. Add authorized redirect URI: `https://yourdomain.com/api/auth/callback/google`
 4. Add `http://localhost:3000/api/auth/callback/google` for local development
 5. Copy Client ID and Client Secret to environment variables
-
-### Facebook OAuth Setup
-
-1. Go to [Facebook Developer Dashboard](https://developers.facebook.com)
-2. Create a new app → Consumer
-3. Add Facebook Login product
-4. Add Valid OAuth Redirect URI: `https://yourdomain.com/api/auth/callback/facebook`
-5. Copy App ID and App Secret to environment variables
 
 ---
 
@@ -164,7 +154,6 @@ git push origin main
 
 # 6. Configure OAuth callback URLs
 # → In Google Cloud Console: add your Vercel URL
-# → In Facebook Dashboard: add your Vercel URL
 
 # 7. Test
 # → Visit your app URL

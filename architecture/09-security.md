@@ -240,12 +240,10 @@ Sensitive credentials are never committed to git or included in the client bundl
 | `DATABASE_URL` | Yes | Neon connection string with credentials |
 | `AUTH_SECRET` | Yes | Used to sign/verify JWT cookies |
 | `GOOGLE_CLIENT_SECRET` | Yes | OAuth credential |
-| `FACEBOOK_CLIENT_SECRET` | Yes | OAuth credential |
 | `RESEND_API_KEY` | Yes | Email service credential |
 | `CRON_SECRET` | Yes | Cron endpoint auth |
 | `AUTH_URL` | No | Public URL of the app |
 | `GOOGLE_CLIENT_ID` | No | Public half of the OAuth credential |
-| `FACEBOOK_CLIENT_ID` | No | Public half of the OAuth credential |
 | `RESEND_FROM_EMAIL` | No | Just an email address |
 
 Next.js only includes environment variables in the client bundle if they are prefixed with `NEXT_PUBLIC_`. None of the sensitive variables use this prefix — they stay on the server.

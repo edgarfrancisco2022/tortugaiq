@@ -59,12 +59,6 @@ Both Google and Facebook OAuth apps are configured with the old Vercel URL. They
    - (Keep the `localhost:3000` URI for local dev)
 4. Save
 
-### Facebook Developer Dashboard
-1. Go to [developers.facebook.com](https://developers.facebook.com) → your TortugaIQ app
-2. Facebook Login → Settings → Valid OAuth Redirect URIs, add:
-   - `https://yourdomain.com/api/auth/callback/facebook`
-3. Save
-
 ---
 
 ## Phase 4 — Verify Domain in Resend
@@ -148,7 +142,6 @@ Key areas it should check:
 - [ ] Domain connected to Vercel + DNS records added
 - [ ] `AUTH_URL` updated in Vercel env vars
 - [ ] Google OAuth callback URL updated
-- [ ] Facebook OAuth callback URL updated
 - [ ] Domain verified in Resend + DNS records added
 - [ ] `src/actions/auth.ts` updated to use `RESEND_FROM_EMAIL`
 - [ ] `RESEND_FROM_EMAIL` set in Vercel env vars
