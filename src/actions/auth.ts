@@ -99,7 +99,7 @@ export async function requestPasswordReset(input: {
   try {
     const resend = new Resend(process.env.RESEND_API_KEY)
     await resend.emails.send({
-      from: 'TortugaIQ <onboarding@resend.dev>',
+      from: `TortugaIQ <${process.env.RESEND_FROM_EMAIL}>`,
       to: user.email,
       subject: 'Reset your TortugaIQ password',
       html: `
@@ -167,7 +167,7 @@ export async function resetPassword(input: {
     try {
       const resend = new Resend(process.env.RESEND_API_KEY)
       await resend.emails.send({
-        from: 'TortugaIQ <onboarding@resend.dev>',
+        from: `TortugaIQ <${process.env.RESEND_FROM_EMAIL}>`,
         to: user.email,
         subject: 'Your TortugaIQ password was changed',
         html: `
