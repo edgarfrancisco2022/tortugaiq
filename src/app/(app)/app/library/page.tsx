@@ -44,7 +44,7 @@ export default function ListMode() {
   const { collapsed } = useSidebarState()
   const { registerViewStateSaver } = useViewStateRegistry()
 
-  const { data: allConcepts = [] } = useConcepts()
+  const { data: allConcepts = [], isLoading: conceptsLoading } = useConcepts()
   const { data: subjects = [] } = useSubjects()
   const { data: topics = [] } = useTopics()
   const { data: subtopics = [] } = useSubtopics()
@@ -301,7 +301,9 @@ export default function ListMode() {
         { keyLabel: '+ / −', actionLabel: 'Review Count' },
       ]} />
 
-      {results.length === 0 ? (
+      {conceptsLoading ? (
+        <div className="text-center py-16 text-gray-400 text-sm">Loading…</div>
+      ) : results.length === 0 ? (
         <div className="text-center py-16 text-gray-400 text-sm">
           {allConcepts.length === 0 ? 'No concepts yet. Create your first concept to get started.' : 'No concepts match the current filters.'}
         </div>

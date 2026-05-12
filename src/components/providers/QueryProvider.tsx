@@ -21,7 +21,8 @@ export default function QueryProvider({ children }: { children: React.ReactNode 
         }),
         defaultOptions: {
           queries: {
-            staleTime: 30_000,
+            staleTime: 5 * 60 * 1000,
+            gcTime: 30 * 60 * 1000,
             refetchOnWindowFocus: false,
             retry: (failureCount, error) => {
               if (error instanceof Error && error.message === 'Unauthorized') return false

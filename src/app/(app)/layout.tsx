@@ -11,6 +11,8 @@ import { ConceptFormProvider, useConceptForm } from '@/components/providers/Conc
 import { DirtyStateProvider, useDirtyState } from '@/components/providers/DirtyStateProvider'
 import { SidebarStateContext } from '@/components/providers/SidebarStateProvider'
 import { ViewStateRegistryProvider } from '@/components/providers/ViewStateRegistryProvider'
+import { useConcepts } from '@/hooks/useConcepts'
+import { useSubjects, useTopics, useSubtopics, useTags } from '@/hooks/useSubjects'
 
 const GUEST_TTL_DAYS = 30
 
@@ -57,6 +59,15 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const { openConceptForm } = useConceptForm()
   const qc = useQueryClient()
   const { data: session } = useSession()
+
+  // Prefetch shared data as soon as the app shell mounts so navigating to
+  // Library, Focus, Index, or any subject view hits the cache instead of
+  // waiting for a cold fetch.
+  useConcepts()
+  useSubjects()
+  useTopics()
+  useSubtopics()
+  useTags()
 
   useEffect(() => {
     if (session?.user && !session.user.isGuest) {

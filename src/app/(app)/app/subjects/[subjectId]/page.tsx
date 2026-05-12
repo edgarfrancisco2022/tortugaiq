@@ -51,7 +51,7 @@ export default function SubjectView() {
   const { collapsed } = useSidebarState()
   const { registerViewStateSaver } = useViewStateRegistry()
 
-  const { data: allConcepts = [] } = useConcepts()
+  const { data: allConcepts = [], isLoading: conceptsLoading } = useConcepts()
   const { data: subjects = [] } = useSubjects()
   const { data: topics = [] } = useTopics()
   const { data: subtopics = [] } = useSubtopics()
@@ -351,7 +351,9 @@ export default function SubjectView() {
         </p>
       )}
 
-      {displayed.length === 0 ? (
+      {conceptsLoading ? (
+        <div className="text-center py-16 text-gray-400 text-sm">Loading…</div>
+      ) : displayed.length === 0 ? (
         <div className="text-center py-16 text-gray-400 text-sm">
           {subjectConcepts.length === 0 ? 'No concepts in this subject yet.' : 'No concepts match the current filters.'}
         </div>
