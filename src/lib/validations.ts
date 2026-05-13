@@ -43,7 +43,7 @@ const singleName = z.string().trim().min(1).max(200).nullable().default(null)
 
 export const conceptInputSchema = z.object({
   name: z.string().trim().min(1, 'Concept name is required').max(200),
-  subjectNames: nameList,
+  subjectName: singleName,
   topicName: singleName,
   subtopicName: singleName,
   tagNames: nameList,

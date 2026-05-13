@@ -28,9 +28,9 @@ export default function ConceptForm({ concept = null, onClose, onDone }: Props) 
   const updateMutation = useUpdateConcept()
 
   // Resolve IDs → names for pre-population in edit mode
-  const initSubjects = isEdit
-    ? allSubjects.filter((s) => concept!.subjectIds.includes(s.id)).map((s) => s.name)
-    : []
+  const initSubject: string | null = isEdit && concept!.subjectId
+    ? allSubjects.find((s) => s.id === concept!.subjectId)?.name ?? null
+    : null
   const initTopic: string | null = isEdit && concept!.topicId
     ? allTopics.find((t) => t.id === concept!.topicId)?.name ?? null
     : null
@@ -42,7 +42,7 @@ export default function ConceptForm({ concept = null, onClose, onDone }: Props) 
     : []
 
   const [name, setName] = useState(isEdit ? concept!.name : '')
-  const [selSubjects, setSelSubjects] = useState<string[]>(initSubjects)
+  const [selSubject, setSelSubject] = useState<string | null>(initSubject)
   const [selTopic, setSelTopic] = useState<string | null>(initTopic)
   const [selSubtopic, setSelSubtopic] = useState<string | null>(initSubtopic)
   const [selTags, setSelTags] = useState<string[]>(initTags)
@@ -78,14 +78,14 @@ export default function ConceptForm({ concept = null, onClose, onDone }: Props) 
       setError('Concept name is required.')
       return
     }
-    if (selSubjects.length === 0) {
-      setError('At least one subject is required.')
+    if (!selSubject) {
+      setError('A subject is required.')
       return
     }
 
     const input = {
       name: name.trim(),
-      subjectNames: selSubjects,
+      subjectName: selSubject,
       topicName: selTopic,
       subtopicName: selSubtopic,
       tagNames: selTags,
@@ -164,9 +164,10 @@ export default function ConceptForm({ concept = null, onClose, onDone }: Props) 
             <CreatableMultiSelect
               label="Subject"
               required
+              single
               options={allSubjects.map((s) => s.name)}
-              selected={selSubjects}
-              onChange={setSelSubjects}
+              selected={selSubject ? [selSubject] : []}
+              onChange={(arr) => setSelSubject(arr[arr.length - 1] ?? null)}
               placeholder="Select or create subject..."
               onTabNext={() => topicRef.current?.focus()}
             />

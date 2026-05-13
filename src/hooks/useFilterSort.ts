@@ -48,7 +48,7 @@ export interface FilterState {
 
 function filterConcepts(concepts: Concept[], filters: FilterState): Concept[] {
   return concepts.filter((c) => {
-    if (filters.subjects?.length && !filters.subjects.some((id) => c.subjectIds.includes(id)))
+    if (filters.subjects?.length && !filters.subjects.some((id) => c.subjectId === id))
       return false
     if (filters.topics?.length && !filters.topics.some((id) => c.topicId === id))
       return false

@@ -138,8 +138,8 @@ export default function OverviewPage() {
 
   const reviewsBySubjectMap: Record<string, number> = {}
   for (const c of concepts) {
-    for (const sid of c.subjectIds) {
-      reviewsBySubjectMap[sid] = (reviewsBySubjectMap[sid] || 0) + (c.reviewCount || 0)
+    if (c.subjectId) {
+      reviewsBySubjectMap[c.subjectId] = (reviewsBySubjectMap[c.subjectId] || 0) + (c.reviewCount || 0)
     }
   }
 
@@ -172,13 +172,13 @@ export default function OverviewPage() {
   // ── Inventory ──────────────────────────────────────────────────────────────
   const conceptsBySubject = [...subjects]
     .sort((a, b) => {
-      const ca = concepts.filter((c) => c.subjectIds.includes(a.id)).length
-      const cb = concepts.filter((c) => c.subjectIds.includes(b.id)).length
+      const ca = concepts.filter((c) => c.subjectId === a.id).length
+      const cb = concepts.filter((c) => c.subjectId === b.id).length
       return cb - ca
     })
     .map((s) => ({
       name: s.name,
-      value: concepts.filter((c) => c.subjectIds.includes(s.id)).length,
+      value: concepts.filter((c) => c.subjectId === s.id).length,
     }))
 
   const recentConcepts = [...concepts]
@@ -203,7 +203,7 @@ export default function OverviewPage() {
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((s) => ({
       name: s.name,
-      value: `${concepts.filter((c) => c.subjectIds.includes(s.id)).length} concepts`,
+      value: `${concepts.filter((c) => c.subjectId === s.id).length} concepts`,
     }))
 
   const topicList = [...topics]
@@ -298,7 +298,7 @@ export default function OverviewPage() {
           ) : (
             <div className="space-y-0.5">
               {recentConcepts.map((c) => {
-                const conceptSubjects = subjects.filter((s) => c.subjectIds.includes(s.id))
+                const conceptSubject = subjects.find((s) => s.id === c.subjectId)
                 return (
                   <Link
                     key={c.id}
@@ -313,13 +313,11 @@ export default function OverviewPage() {
                     <span className="text-gray-700 group-hover:text-gray-900 transition-colors min-w-0 break-words flex-1">
                       {c.name}
                     </span>
-                    {conceptSubjects.length > 0 && (
+                    {conceptSubject && (
                       <div className="flex flex-wrap gap-1 flex-shrink-0">
-                        {conceptSubjects.map((s) => (
-                          <span key={s.id} className="text-xs bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-full">
-                            {s.name}
-                          </span>
-                        ))}
+                        <span className="text-xs bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-full">
+                          {conceptSubject.name}
+                        </span>
                       </div>
                     )}
                   </Link>

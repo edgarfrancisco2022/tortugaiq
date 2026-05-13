@@ -363,7 +363,7 @@ interface ListConceptRowProps {
 }
 
 function ListConceptRow({ concept, focused, subjects, onFocus, onSaveState, onDelete, onUpdateField, onIncrementReview, onDecrementReview }: ListConceptRowProps) {
-  const conceptSubjects = subjects.filter((s) => concept.subjectIds.includes(s.id))
+  const conceptSubject = subjects.find((s) => s.id === concept.subjectId)
 
   return (
     <div
@@ -383,11 +383,9 @@ function ListConceptRow({ concept, focused, subjects, onFocus, onSaveState, onDe
             {concept.pinned && <PinIcon size={10} className="inline text-amber-400 mr-1.5 -mt-px" />}
             {concept.name}
           </Link>
-          {conceptSubjects.length > 0 && (
+          {conceptSubject && (
             <div className="flex flex-wrap gap-1 mt-1">
-              {conceptSubjects.map((s) => (
-                <span key={s.id} className="text-xs bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-full">{s.name}</span>
-              ))}
+              <span className="text-xs bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-full">{conceptSubject.name}</span>
             </div>
           )}
         </div>

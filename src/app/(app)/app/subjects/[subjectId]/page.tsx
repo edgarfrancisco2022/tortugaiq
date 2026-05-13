@@ -116,7 +116,7 @@ export default function SubjectView() {
   const suppressScroll = useRef(false)
   const backRestoring = useRef(false)
 
-  const subjectConcepts = allConcepts.filter((c) => c.subjectIds.includes(subjectId))
+  const subjectConcepts = allConcepts.filter((c) => c.subjectId === subjectId)
 
   const displayed = useMemo(() => {
     const filtered = subjectConcepts.filter((c) => {

@@ -5,7 +5,6 @@ import { auth } from '@/auth'
 import { db } from '@/db'
 import {
   concepts,
-  conceptSubjects,
   subjectConceptOrders,
   subjectSortModes,
   subjects,
@@ -55,10 +54,10 @@ export async function getSubjects(): Promise<(Subject & { conceptCount: number }
       name: subjects.name,
       createdAt: subjects.createdAt,
       updatedAt: subjects.updatedAt,
-      conceptCount: sql<number>`count(${conceptSubjects.conceptId})::int`,
+      conceptCount: sql<number>`count(${concepts.id})::int`,
     })
     .from(subjects)
-    .leftJoin(conceptSubjects, eq(conceptSubjects.subjectId, subjects.id))
+    .leftJoin(concepts, and(eq(concepts.subjectId, subjects.id), eq(concepts.userId, userId)))
     .where(eq(subjects.userId, userId))
     .groupBy(subjects.id)
     .orderBy(subjects.name)
@@ -118,12 +117,11 @@ export async function setSubjectSortMode(
     if (existingOrders.length === 0) {
       // Initialize with current date-ordered concept list
       const conceptsInSubject = await db
-        .select({ conceptId: conceptSubjects.conceptId, createdAt: concepts.createdAt })
-        .from(conceptSubjects)
-        .innerJoin(concepts, eq(concepts.id, conceptSubjects.conceptId))
+        .select({ conceptId: concepts.id, createdAt: concepts.createdAt })
+        .from(concepts)
         .where(
           and(
-            eq(conceptSubjects.subjectId, subjectId),
+            eq(concepts.subjectId, subjectId),
             eq(concepts.userId, userId)
           )
         )

@@ -44,7 +44,7 @@ export function useConcept(id: string) {
       const allTags     = qc.getQueryData<{ id: string; name: string }[]>(['tags'])     ?? []
       return {
         ...concept,
-        subjectNames: allSubjects.filter((s) => concept.subjectIds.includes(s.id)).map((s) => s.name),
+        subjectName:  allSubjects.find((s) => s.id === concept.subjectId)?.name ?? null,
         topicName:    allTopics.find((t) => t.id === concept.topicId)?.name ?? null,
         tagNames:     allTags.filter((t) => concept.tagIds.includes(t.id)).map((t) => t.name),
       }

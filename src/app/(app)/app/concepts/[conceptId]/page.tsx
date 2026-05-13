@@ -119,11 +119,9 @@ export default function ConceptView() {
       {/* Metadata */}
       <div className="bg-gray-50 border border-gray-100 rounded-xl p-5 mb-3">
         <div className="space-y-2 mb-4">
-          {concept.subjectNames && concept.subjectNames.length > 0 && (
-            <MetaRow label="Subjects">
-              {concept.subjectNames.map((name) => (
-                <Chip key={name} cls="bg-blue-100 text-blue-700">{name}</Chip>
-              ))}
+          {concept.subjectName && (
+            <MetaRow label="Subject">
+              <Chip cls="bg-blue-100 text-blue-700">{concept.subjectName}</Chip>
             </MetaRow>
           )}
           <MetaRow label="Topic">

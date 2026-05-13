@@ -25,7 +25,7 @@ graph LR
     User -->|owns| Subtopic
     User -->|owns| Tag
     User -->|owns| Concept
-    Concept -->|belongs to many| Subject
+    Concept -->|has one| Subject
     Concept -->|has one| Topic
     Concept -->|has one| Subtopic
     Concept -->|belongs to many| Tag
@@ -37,7 +37,7 @@ graph LR
 
 **Concept** — the main entity. Has a name, three text content fields, a state enum, priority enum, review count, and a pinned flag.
 
-**Subject** — a broad category (e.g., "Machine Learning", "Mathematics"). Concepts belong to multiple subjects. Subjects have custom sort orders and sort mode preferences.
+**Subject** — a broad category (e.g., "Machine Learning", "Mathematics"). Each concept has at most one subject (direct FK on the concept row — same pattern as Topic). Subjects have custom sort orders and sort mode preferences.
 
 **Topic** — a single-level grouping below Subject (e.g., "Gradient Descent", "Linear Algebra"). Each concept has **at most one** topic (stored as a direct FK on the concept row). A concept on "backpropagation" might be in subject "Machine Learning" with topic "Gradient Descent".
 
@@ -142,7 +142,7 @@ Zod validates data **at runtime** and produces **TypeScript types** from the sam
 ```typescript
 const conceptInputSchema = z.object({
   name: z.string().min(1).max(200),
-  subjectNames: z.array(z.string()),
+  subjectName: z.string().nullable(),
   // ...
 })
 
@@ -178,6 +178,7 @@ The production app was built feature by feature:
 2. Core concept CRUD (create, read, update, delete)
 3. Subjects, topics, tags (subjects and tags M:M; topics many-to-one FK)
 3a. Subtopics entity added; topic changed from M:M junction to direct FK on concepts (migration 0004)
+3b. Subject changed from M:M junction (`concept_subjects`) to direct FK on concepts (migration 0005); mirrors the Topic migration
 4. Multiple view modes (Library, Focus, Index)
 5. Study session tracking
 6. MVK drawer and keyboard navigation

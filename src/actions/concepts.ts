@@ -5,7 +5,6 @@ import { auth } from '@/auth'
 import { db } from '@/db'
 import {
   concepts,
-  conceptSubjects,
   conceptTags,
   subjects,
   subjectConceptOrders,
@@ -102,12 +101,11 @@ async function resolveOrCreate(
 // ---------------------------------------------------------------------------
 
 async function pruneOrphans(userId: string): Promise<void> {
-  // Subjects with no concepts (via junction table)
+  // Subjects no longer referenced by any concept's subject_id FK
   const usedSubjectIds = db
-    .select({ subjectId: conceptSubjects.subjectId })
-    .from(conceptSubjects)
-    .innerJoin(concepts, eq(concepts.id, conceptSubjects.conceptId))
-    .where(eq(concepts.userId, userId))
+    .selectDistinct({ subjectId: concepts.subjectId })
+    .from(concepts)
+    .where(and(eq(concepts.userId, userId), isNotNull(concepts.subjectId)))
 
   await db
     .delete(subjects)
@@ -166,33 +164,25 @@ async function pruneOrphans(userId: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Attach junction data (subjects and tags only — topics/subtopics are direct FKs)
+// Attach junction data (tags only — subject/topic/subtopic are direct FKs)
 // ---------------------------------------------------------------------------
 
-async function attachJunctions(
-  userId: string,
+async function attachTagJunctions(
   conceptIds: string[]
-): Promise<Map<string, { subjectIds: string[]; tagIds: string[] }>> {
+): Promise<Map<string, { tagIds: string[] }>> {
   if (conceptIds.length === 0) return new Map()
 
-  const [cs, ctg] = await Promise.all([
-    db
-      .select({ conceptId: conceptSubjects.conceptId, subjectId: conceptSubjects.subjectId })
-      .from(conceptSubjects)
-      .where(inArray(conceptSubjects.conceptId, conceptIds)),
-    db
-      .select({ conceptId: conceptTags.conceptId, tagId: conceptTags.tagId })
-      .from(conceptTags)
-      .where(inArray(conceptTags.conceptId, conceptIds)),
-  ])
+  const ctg = await db
+    .select({ conceptId: conceptTags.conceptId, tagId: conceptTags.tagId })
+    .from(conceptTags)
+    .where(inArray(conceptTags.conceptId, conceptIds))
 
-  const map = new Map<string, { subjectIds: string[]; tagIds: string[] }>()
+  const map = new Map<string, { tagIds: string[] }>()
 
   for (const id of conceptIds) {
-    map.set(id, { subjectIds: [], tagIds: [] })
+    map.set(id, { tagIds: [] })
   }
 
-  for (const row of cs) map.get(row.conceptId)?.subjectIds.push(row.subjectId)
   for (const row of ctg) map.get(row.conceptId)?.tagIds.push(row.tagId)
 
   return map
@@ -212,11 +202,11 @@ export async function getConcepts(): Promise<Concept[]> {
     .orderBy(concepts.name)
 
   const ids = rows.map((r) => r.id)
-  const junctions = await attachJunctions(userId, ids)
+  const tagJunctions = await attachTagJunctions(ids)
 
   return rows.map((row) => ({
     ...row,
-    ...(junctions.get(row.id) ?? { subjectIds: [], tagIds: [] }),
+    tagIds: tagJunctions.get(row.id)?.tagIds ?? [],
   }))
 }
 
@@ -231,17 +221,18 @@ export async function getConcept(id: string): Promise<Concept | null> {
 
   if (!row) return null
 
-  const junctions = await attachJunctions(userId, [id])
-  const junction = junctions.get(id) ?? { subjectIds: [], tagIds: [] }
+  const tagJunctions = await attachTagJunctions([id])
+  const tagIds = tagJunctions.get(id)?.tagIds ?? []
 
   // Fetch names for the concept view
-  const [subjectRows, topicRow, subtopicRow, tagRows] = await Promise.all([
-    junction.subjectIds.length > 0
+  const [subjectRow, topicRow, subtopicRow, tagRows] = await Promise.all([
+    row.subjectId
       ? db
-          .select({ id: subjects.id, name: subjects.name })
+          .select({ name: subjects.name })
           .from(subjects)
-          .where(inArray(subjects.id, junction.subjectIds))
-      : Promise.resolve([]),
+          .where(eq(subjects.id, row.subjectId))
+          .then((r) => r[0] ?? null)
+      : Promise.resolve(null),
     row.topicId
       ? db
           .select({ name: topics.name })
@@ -256,18 +247,18 @@ export async function getConcept(id: string): Promise<Concept | null> {
           .where(eq(subtopics.id, row.subtopicId))
           .then((r) => r[0] ?? null)
       : Promise.resolve(null),
-    junction.tagIds.length > 0
+    tagIds.length > 0
       ? db
           .select({ id: tags.id, name: tags.name })
           .from(tags)
-          .where(inArray(tags.id, junction.tagIds))
+          .where(inArray(tags.id, tagIds))
       : Promise.resolve([]),
   ])
 
   return {
     ...row,
-    ...junction,
-    subjectNames: subjectRows.map((r) => r.name),
+    tagIds,
+    subjectName: subjectRow?.name ?? null,
     tagNames: tagRows.map((r) => r.name),
     topicName: topicRow?.name ?? null,
     subtopicName: subtopicRow?.name ?? null,
@@ -278,13 +269,14 @@ export async function createConcept(input: ConceptInput): Promise<string> {
   const userId = await requireAuth()
   const parsed = conceptInputSchema.parse(input)
 
-  const [subjectIds, resolvedTopicIds, resolvedSubtopicIds, tagIds] = await Promise.all([
-    resolveOrCreate(userId, parsed.subjectNames, subjects),
+  const [resolvedSubjectIds, resolvedTopicIds, resolvedSubtopicIds, tagIds] = await Promise.all([
+    parsed.subjectName ? resolveOrCreate(userId, [parsed.subjectName], subjects) : Promise.resolve([]),
     parsed.topicName ? resolveOrCreate(userId, [parsed.topicName], topics) : Promise.resolve([]),
     parsed.subtopicName ? resolveOrCreate(userId, [parsed.subtopicName], subtopics) : Promise.resolve([]),
     resolveOrCreate(userId, parsed.tagNames, tags),
   ])
 
+  const subjectId = resolvedSubjectIds[0] ?? null
   const topicId = resolvedTopicIds[0] ?? null
   const subtopicId = resolvedSubtopicIds[0] ?? null
 
@@ -299,6 +291,7 @@ export async function createConcept(input: ConceptInput): Promise<string> {
       state: parsed.state,
       priority: parsed.priority,
       pinned: parsed.pinned,
+      subjectId,
       topicId,
       subtopicId,
     })
@@ -306,47 +299,37 @@ export async function createConcept(input: ConceptInput): Promise<string> {
 
   const conceptId = concept.id
 
-  await Promise.all([
-    subjectIds.length > 0
-      ? db
-          .insert(conceptSubjects)
-          .values(subjectIds.map((subjectId) => ({ conceptId, subjectId })))
-          .onConflictDoNothing()
-      : Promise.resolve(),
-    tagIds.length > 0
-      ? db
-          .insert(conceptTags)
-          .values(tagIds.map((tagId) => ({ conceptId, tagId })))
-          .onConflictDoNothing()
-      : Promise.resolve(),
-  ])
+  if (tagIds.length > 0) {
+    await db
+      .insert(conceptTags)
+      .values(tagIds.map((tagId) => ({ conceptId, tagId })))
+      .onConflictDoNothing()
+  }
 
-  // Initialize subject_concept_orders for subjects that have custom sort mode
-  if (subjectIds.length > 0) {
-    for (const subjectId of subjectIds) {
-      const maxPos = await db
-        .select({ pos: subjectConceptOrders.position })
-        .from(subjectConceptOrders)
-        .where(
-          and(
-            eq(subjectConceptOrders.userId, userId),
-            eq(subjectConceptOrders.subjectId, subjectId)
-          )
+  // Initialize subject_concept_orders if subject has a custom sort order already
+  if (subjectId) {
+    const maxPos = await db
+      .select({ pos: subjectConceptOrders.position })
+      .from(subjectConceptOrders)
+      .where(
+        and(
+          eq(subjectConceptOrders.userId, userId),
+          eq(subjectConceptOrders.subjectId, subjectId)
         )
-        .orderBy(sql`${subjectConceptOrders.position} DESC`)
-        .limit(1)
+      )
+      .orderBy(sql`${subjectConceptOrders.position} DESC`)
+      .limit(1)
 
-      if (maxPos.length > 0) {
-        await db
-          .insert(subjectConceptOrders)
-          .values({
-            userId,
-            subjectId,
-            conceptId,
-            position: maxPos[0].pos + 1,
-          })
-          .onConflictDoNothing()
-      }
+    if (maxPos.length > 0) {
+      await db
+        .insert(subjectConceptOrders)
+        .values({
+          userId,
+          subjectId,
+          conceptId,
+          position: maxPos[0].pos + 1,
+        })
+        .onConflictDoNothing()
     }
   }
 
@@ -357,71 +340,48 @@ export async function updateConcept(id: string, input: ConceptInput): Promise<vo
   const userId = await requireAuth()
   const parsed = conceptInputSchema.parse(input)
 
-  // Verify ownership
+  // Verify ownership and get current subjectId
   const existing = await db
-    .select({ id: concepts.id })
+    .select({ id: concepts.id, subjectId: concepts.subjectId })
     .from(concepts)
     .where(and(eq(concepts.id, id), eq(concepts.userId, userId)))
     .then((rows) => rows[0] ?? null)
 
   if (!existing) throw new Error('Not found')
 
-  // Get current subject/tag junctions
-  const junctions = await attachJunctions(userId, [id])
-  const current = junctions.get(id) ?? { subjectIds: [], tagIds: [] }
+  // Get current tag junctions
+  const tagJunctions = await attachTagJunctions([id])
+  const currentTagIds = tagJunctions.get(id)?.tagIds ?? []
 
-  const [newSubjectIds, resolvedTopicIds, resolvedSubtopicIds, newTagIds] = await Promise.all([
-    resolveOrCreate(userId, parsed.subjectNames, subjects),
+  const [resolvedSubjectIds, resolvedTopicIds, resolvedSubtopicIds, newTagIds] = await Promise.all([
+    parsed.subjectName ? resolveOrCreate(userId, [parsed.subjectName], subjects) : Promise.resolve([]),
     parsed.topicName ? resolveOrCreate(userId, [parsed.topicName], topics) : Promise.resolve([]),
     parsed.subtopicName ? resolveOrCreate(userId, [parsed.subtopicName], subtopics) : Promise.resolve([]),
     resolveOrCreate(userId, parsed.tagNames, tags),
   ])
 
+  const newSubjectId = resolvedSubjectIds[0] ?? null
   const newTopicId = resolvedTopicIds[0] ?? null
   const newSubtopicId = resolvedSubtopicIds[0] ?? null
 
-  // Update concept row — topic/subtopic are now direct FKs updated here.
-  // Content fields (mvkNotes, markdownNotes, referencesMarkdown) are managed
-  // by updateConceptContent; status fields (state, priority, pinned) are
-  // managed by updateConceptField.
   await db
     .update(concepts)
     .set({
       name: parsed.name,
+      subjectId: newSubjectId,
       topicId: newTopicId,
       subtopicId: newSubtopicId,
       updatedAt: new Date(),
     })
     .where(and(eq(concepts.id, id), eq(concepts.userId, userId)))
 
-  // Diff and update subject/tag junction tables
-  const oldSubjectSet = new Set(current.subjectIds)
-  const newSubjectSet = new Set(newSubjectIds)
-  const oldTagSet = new Set(current.tagIds)
+  // Diff and update tag junction table
+  const oldTagSet = new Set(currentTagIds)
   const newTagSet = new Set(newTagIds)
-
-  const toAddSubjects = newSubjectIds.filter((sid) => !oldSubjectSet.has(sid))
-  const toRemoveSubjects = current.subjectIds.filter((sid) => !newSubjectSet.has(sid))
   const toAddTags = newTagIds.filter((tid) => !oldTagSet.has(tid))
-  const toRemoveTags = current.tagIds.filter((tid) => !newTagSet.has(tid))
+  const toRemoveTags = currentTagIds.filter((tid) => !newTagSet.has(tid))
 
   await Promise.all([
-    toAddSubjects.length > 0
-      ? db
-          .insert(conceptSubjects)
-          .values(toAddSubjects.map((subjectId) => ({ conceptId: id, subjectId })))
-          .onConflictDoNothing()
-      : Promise.resolve(),
-    toRemoveSubjects.length > 0
-      ? db
-          .delete(conceptSubjects)
-          .where(
-            and(
-              eq(conceptSubjects.conceptId, id),
-              inArray(conceptSubjects.subjectId, toRemoveSubjects)
-            )
-          )
-      : Promise.resolve(),
     toAddTags.length > 0
       ? db
           .insert(conceptTags)
@@ -440,38 +400,42 @@ export async function updateConcept(id: string, input: ConceptInput): Promise<vo
       : Promise.resolve(),
   ])
 
-  // Remove concept from subject_concept_orders for removed subjects
-  if (toRemoveSubjects.length > 0) {
-    await db
-      .delete(subjectConceptOrders)
-      .where(
-        and(
-          eq(subjectConceptOrders.userId, userId),
-          eq(subjectConceptOrders.conceptId, id),
-          inArray(subjectConceptOrders.subjectId, toRemoveSubjects)
-        )
-      )
-  }
-
-  // Add to subject_concept_orders for new subjects that are in custom mode
-  for (const subjectId of toAddSubjects) {
-    const maxPos = await db
-      .select({ pos: subjectConceptOrders.position })
-      .from(subjectConceptOrders)
-      .where(
-        and(
-          eq(subjectConceptOrders.userId, userId),
-          eq(subjectConceptOrders.subjectId, subjectId)
-        )
-      )
-      .orderBy(sql`${subjectConceptOrders.position} DESC`)
-      .limit(1)
-
-    if (maxPos.length > 0) {
+  // Handle subject_concept_orders when subject changes
+  const oldSubjectId = existing.subjectId
+  if (oldSubjectId !== newSubjectId) {
+    // Remove order entry for old subject
+    if (oldSubjectId) {
       await db
-        .insert(subjectConceptOrders)
-        .values({ userId, subjectId, conceptId: id, position: maxPos[0].pos + 1 })
-        .onConflictDoNothing()
+        .delete(subjectConceptOrders)
+        .where(
+          and(
+            eq(subjectConceptOrders.userId, userId),
+            eq(subjectConceptOrders.conceptId, id),
+            eq(subjectConceptOrders.subjectId, oldSubjectId)
+          )
+        )
+    }
+
+    // Add order entry for new subject if it already has a custom order
+    if (newSubjectId) {
+      const maxPos = await db
+        .select({ pos: subjectConceptOrders.position })
+        .from(subjectConceptOrders)
+        .where(
+          and(
+            eq(subjectConceptOrders.userId, userId),
+            eq(subjectConceptOrders.subjectId, newSubjectId)
+          )
+        )
+        .orderBy(sql`${subjectConceptOrders.position} DESC`)
+        .limit(1)
+
+      if (maxPos.length > 0) {
+        await db
+          .insert(subjectConceptOrders)
+          .values({ userId, subjectId: newSubjectId, conceptId: id, position: maxPos[0].pos + 1 })
+          .onConflictDoNothing()
+      }
     }
   }
 

@@ -18,7 +18,7 @@ PostgreSQL ("Postgres") is a full-featured open-source relational database. If y
 
 - **Foreign keys with ON DELETE CASCADE** — when a user is deleted, all their data is automatically deleted
 - **Unique constraints** — e.g., a user can't have two subjects with the same name
-- **Composite primary keys** — junction tables use `(conceptId, subjectId)` as PK to prevent duplicates
+- **Composite primary keys** — junction tables use `(conceptId, tagId)` as PK to prevent duplicates
 - **Enums in text columns** — Drizzle uses a `text` column with an enum constraint for `state` and `priority` (no PostgreSQL native ENUM type, which avoids migration complexity)
 - **Timestamps with time zone** — all timestamps use `withTimezone: true` to ensure correct UTC storage
 
@@ -165,22 +165,23 @@ All four have the same shape: `id`, `userId` (FK cascade), `name`, `createdAt`, 
 | `priority` | text enum | `LOW\|MEDIUM\|HIGH` |
 | `review_count` | integer | Self-reported review count; defaults to 0 |
 | `pinned` | boolean | Pinned flag; defaults to false |
+| `subject_id` | text FK → subjects nullable | **SET NULL** on subject delete; at most one subject per concept |
 | `topic_id` | text FK → topics nullable | **SET NULL** on topic delete; at most one topic per concept |
 | `subtopic_id` | text FK → subtopics nullable | **SET NULL** on subtopic delete; at most one subtopic per concept |
 | `created_at` | timestamp tz | |
 | `updated_at` | timestamp tz | Updated on any change |
 
-`topic_id` and `subtopic_id` were added in migration `0004`, replacing the old `concept_topics` M:M junction table. Each concept now has **at most one** topic and **at most one** subtopic, stored directly on the concept row.
+`subject_id`, `topic_id`, and `subtopic_id` are all direct FK columns on the concept row (ON DELETE SET NULL). Topics and subtopics were added in migration `0004` (replacing `concept_topics`). Subjects were added in migration `0005` (replacing `concept_subjects`). Each concept has **at most one** subject, topic, and subtopic.
 
 ### Junction Tables (Many-to-Many)
 
-**`concept_subjects`** — Links concepts to subjects (composite PK: `conceptId + subjectId`)
-
 **`concept_tags`** — Links concepts to tags (composite PK: `conceptId + tagId`)
 
-Both sides cascade delete: if a concept is deleted, its junction rows go. If a subject is deleted, its junction rows go. Orphan pruning (see [05 — Server Actions](./05-server-actions.md)) then removes the subject if nothing references it.
+Both sides cascade delete: if a concept is deleted, its junction rows go. If a tag is deleted, its junction rows go. Orphan pruning (see [05 — Server Actions](./05-server-actions.md)) removes tags no longer referenced by any concept.
 
 > **Note:** `concept_topics` (the old M:M junction for topics) was removed in migration `0004`. Topics are now a direct FK on the `concepts` row, not a junction table.
+>
+> **Note:** `concept_subjects` (the old M:M junction for subjects) was removed in migration `0005`. Subjects are now a direct FK (`subject_id`) on the `concepts` row — same pattern as topics and subtopics.
 
 ### Ordering Tables
 
@@ -275,12 +276,9 @@ erDiagram
         text priority
         integer review_count
         boolean pinned
+        text subject_id FK
         text topic_id FK
         text subtopic_id FK
-    }
-    concept_subjects {
-        text concept_id FK
-        text subject_id FK
     }
     concept_tags {
         text concept_id FK
@@ -312,7 +310,7 @@ erDiagram
     users ||--o{ tags : owns
     users ||--o{ concepts : owns
     users ||--o{ study_sessions : logs
-    concepts }o--o{ subjects : "via concept_subjects"
+    concepts }o--|| subjects : "subject_id FK (nullable)"
     concepts }o--|| topics : "topic_id FK (nullable)"
     concepts }o--|| subtopics : "subtopic_id FK (nullable)"
     concepts }o--o{ tags : "via concept_tags"
@@ -371,15 +369,17 @@ await db
 ```typescript
 const rows = await db
   .select({
-    ...subjects,
-    conceptCount: count(conceptSubjects.conceptId),
+    ...getTableColumns(subjects),
+    conceptCount: sql<number>`count(${concepts.id})::int`,
   })
   .from(subjects)
-  .leftJoin(conceptSubjects, eq(conceptSubjects.subjectId, subjects.id))
+  .leftJoin(concepts, and(eq(concepts.subjectId, subjects.id), eq(concepts.userId, userId)))
   .where(eq(subjects.userId, userId))
   .groupBy(subjects.id)
   .orderBy(asc(subjects.name))
 ```
+
+LEFT JOIN on the direct FK: subjects with zero concepts still appear (count = 0). The `concepts.userId` guard in the JOIN condition prevents cross-user contamination.
 
 ### Drizzle's relational query API (alternative to join builders)
 
@@ -435,6 +435,7 @@ git push
 | `0002_clever_drax.sql` | Fix concepts table timestamp defaults |
 | `0003_nervous_molecule_man.sql` | Add `is_guest` boolean to users table |
 | `0004_topic_fk_subtopics.sql` | Add `topic_id`/`subtopic_id` FKs to `concepts`; create `subtopics` table; data-migrate existing topic assignments; drop `concept_topics` junction table |
+| `0005_cloudy_typhoid_mary.sql` | Add `subject_id` FK to `concepts`; data-migrate existing subject assignments (first subject per concept); clean up orphaned `subject_concept_orders` rows; drop `concept_subjects` junction table |
 
 Each migration is stored in `src/db/migrations/` and committed to git. The `meta/` subfolder contains Drizzle's internal snapshot JSON files that track the schema state.
 

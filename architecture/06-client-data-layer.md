@@ -147,10 +147,8 @@ export function useConcept(id: string) {
 
       return {
         ...concept,
-        subjectNames: allSubjects
-          .filter((s) => concept.subjectIds.includes(s.id))
-          .map((s) => s.name),
-        // ...
+        subjectName: allSubjects.find((s) => s.id === concept.subjectId)?.name ?? null,
+        // topicName, subtopicName, tagNames resolved similarly
       }
     },
     initialDataUpdatedAt: () => qc.getQueryState(['concepts'])?.dataUpdatedAt,

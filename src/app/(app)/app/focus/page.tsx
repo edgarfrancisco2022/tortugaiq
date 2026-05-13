@@ -110,7 +110,7 @@ function FocusMode() {
   const safeIndex = filtered.length === 0 ? 0 : Math.min(currentIndex, filtered.length - 1)
 
   const concept = filtered[safeIndex] ?? null
-  const conceptSubjects = concept ? subjects.filter((s) => concept.subjectIds.includes(s.id)) : []
+  const conceptSubject = concept ? subjects.find((s) => s.id === concept.subjectId) : null
 
   // Registry ref: inline assignment keeps closure fresh every render.
   const saveStateForRegistryRef = useRef<() => void>(() => {})
@@ -302,14 +302,12 @@ function FocusMode() {
                 </Link>
               </div>
 
-              {/* Subject badges */}
-              {conceptSubjects.length > 0 && (
+              {/* Subject badge */}
+              {conceptSubject && (
                 <div className="flex flex-wrap gap-1.5 mb-5">
-                  {conceptSubjects.map((s) => (
-                    <span key={s.id} className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
-                      {s.name}
-                    </span>
-                  ))}
+                  <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
+                    {conceptSubject.name}
+                  </span>
                 </div>
               )}
 

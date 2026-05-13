@@ -124,14 +124,14 @@ export interface Concept {
   pinned: boolean;
   createdAt: Date;
   updatedAt: Date;
-  // Direct FKs (stored on concepts row)
+  // Direct FK fields (stored on concepts row)
+  subjectId: string | null;
   topicId: string | null;
   subtopicId: string | null;
   // Joined fields (populated by query, not stored in concepts table)
-  subjectIds: string[];
   tagIds: string[];
   // Only populated by getConcept (single-concept queries)
-  subjectNames?: string[];
+  subjectName?: string | null;
   topicName?: string | null;
   subtopicName?: string | null;
   tagNames?: string[];
@@ -148,7 +148,7 @@ export interface StudySession {
 // Input types for mutations (names not IDs — server resolves/creates)
 export interface ConceptInput {
   name: string;
-  subjectNames: string[];
+  subjectName: string | null;
   topicName: string | null;
   subtopicName: string | null;
   tagNames: string[];
@@ -175,8 +175,7 @@ export interface ConceptInput {
 | `topics`                 | User topics — unique `(userId, name)`                                                                    |
 | `subtopics`              | User subtopics — unique `(userId, name)`; same shape as `topics`                                         |
 | `tags`                   | User tags — unique `(userId, name)`                                                                      |
-| `concepts`               | Core entity; `topic_id` and `subtopic_id` are nullable FKs (ON DELETE SET NULL) — many-to-one           |
-| `concept_subjects`       | M:M concept ↔ subject (cascade delete)                                                                   |
+| `concepts`               | Core entity; `subject_id`, `topic_id`, `subtopic_id` are nullable FKs (ON DELETE SET NULL) — many-to-one |
 | `concept_tags`           | M:M concept ↔ tag (cascade delete)                                                                       |
 | `subject_concept_orders` | Custom sort positions per `(userId, subjectId, conceptId)`                                               |
 | `subject_sort_modes`     | Sort mode preference per `(userId, subjectId)` — full 7-value enum matching `SubjectSortMode`            |
@@ -332,10 +331,10 @@ Never accept `userId` from the client. Never skip the ownership check.
 
 | Action                                   | Description                                                                         |
 | ---------------------------------------- | ----------------------------------------------------------------------------------- |
-| `getConcepts()`                          | All user concepts with joined subject/topic/tag IDs                                 |
-| `getConcept(id)`                         | Single concept + joined IDs and names                                               |
-| `createConcept(input)`                   | Resolve-or-create subjects/topics/tags; insert concept + junctions; init sort order |
-| `updateConcept(id, input)`               | Diff old vs new junctions; prune orphans                                            |
+| `getConcepts()`                          | All user concepts; `subjectId`/`topicId`/`subtopicId` come directly from the row; `tagIds` from junction |
+| `getConcept(id)`                         | Single concept + tag junction + resolved names for subject/topic/subtopic/tags      |
+| `createConcept(input)`                   | Resolve-or-create subject/topic/subtopic/tags; set direct FKs on insert; init sort order |
+| `updateConcept(id, input)`               | Update direct FKs; diff tag junctions; handle sort order on subject change; prune orphans |
 | `deleteConcept(id)`                      | Delete concept (FK cascade handles junctions); prune orphaned subjects/topics/tags  |
 | `updateConceptField(id, field, value)`   | Patch `state`, `priority`, or `pinned`                                              |
 | `updateConceptContent(id, field, value)` | Patch `mvkNotes`, `markdownNotes`, or `referencesMarkdown`                          |
@@ -385,8 +384,8 @@ Server Components call Server Actions directly for initial render. Client Compon
 
 | Hook                               | Description                                                                                                                |
 | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `useConcepts()`                    | All user concepts from TQ cache                                                                                            |
-| `useConcept(id)`                   | Single concept; seeded from list cache to avoid waterfall                                                                  |
+| `useConcepts()`                    | All user concepts from TQ cache; each concept has `subjectId` (direct FK)                                                  |
+| `useConcept(id)`                   | Single concept; seeded from list cache — resolves `subjectName` from cached subjects list                                  |
 | `useCreateConcept()`               | Creates concept; uses `refetchType: 'none'` on success to avoid race with `router.push`                                    |
 | `useUpdateConcept()`               | Updates concept metadata                                                                                                   |
 | `useUpdateConceptField()`          | Patches `state`/`priority`/`pinned` with optimistic update                                                                 |

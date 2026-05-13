@@ -100,7 +100,7 @@ Think of this like `@Valid` + Bean Validation in Spring Boot — the annotation 
 
 #### `getConcepts() → Promise<Concept[]>`
 
-Fetches all concepts for the authenticated user with their junction data (subject/tag IDs). `topicId` and `subtopicId` come directly from the concept row — no junction query needed for them.
+Fetches all concepts for the authenticated user. `subjectId`, `topicId`, and `subtopicId` come directly from the concept row — no junction query needed. `tagIds` are fetched via the `concept_tags` junction in a single batch query.
 
 ```typescript
 export async function getConcepts(): Promise<Concept[]> {
@@ -114,16 +114,16 @@ export async function getConcepts(): Promise<Concept[]> {
     .where(eq(concepts.userId, userId))
     .orderBy(asc(concepts.name))
 
-  // Attach M:M junction data (subjects and tags only — topic/subtopic are direct FKs)
+  // Attach tag junction data only — subject/topic/subtopic are direct FKs on the row
   const ids = rows.map((r) => r.id)
-  const junctionMap = await attachJunctions(userId, ids)
+  const tagMap = await attachTagJunctions(userId, ids)
 
   return rows.map((r) => ({
     ...r,
+    subjectId:  r.subjectId,  // direct FK on the row
     topicId:    r.topicId,    // direct FK on the row
     subtopicId: r.subtopicId, // direct FK on the row
-    subjectIds: junctionMap.get(r.id)?.subjectIds ?? [],
-    tagIds:     junctionMap.get(r.id)?.tagIds ?? [],
+    tagIds:     tagMap.get(r.id)?.tagIds ?? [],
   }))
 }
 ```
@@ -136,19 +136,19 @@ Single concept with full junction data INCLUDING names (not just IDs). Used by C
 
 The most complex action. Steps:
 1. Validate input with Zod
-2. `resolveOrCreate()` subjects and tags by name; resolve topic/subtopic by name (single string, not array)
-3. Insert concept row with `topicId`/`subtopicId` set directly
-4. Insert junction rows for subjects and tags (`conceptSubjects`, `conceptTags`)
-5. If any subject uses custom sort mode, append new concept to its order list
+2. `resolveOrCreate()` subject, topic, subtopic, and tags by name
+3. Insert concept row with `subjectId`/`topicId`/`subtopicId` set directly as FKs
+4. Insert junction rows for tags only (`conceptTags`)
+5. If the subject uses custom sort mode, append new concept to its order list
 6. Return new concept ID
 
 #### `updateConcept(id, input) → Promise<void>`
 
-Updates concept name, `topicId`/`subtopicId` FKs, and M:M relationships (subjects, tags). Steps:
+Updates concept name, `subjectId`/`topicId`/`subtopicId` FKs, and the tag junction. Steps:
 1. Verify ownership
-2. Update concept row — name, `topicId`, `subtopicId` directly
-3. Diff old subject/tag junctions vs new → add new ones, remove dropped ones
-4. Update sort orders for affected subjects
+2. Update concept row — name, `subjectId`, `topicId`, `subtopicId` directly
+3. Diff old vs new tag junctions → add new ones, remove dropped ones
+4. Update sort orders if subject changed (remove old order entry, add to new subject's order if it has custom sort)
 5. `pruneOrphans()` — clean up any now-unreferenced subjects/topics/subtopics/tags
 
 #### `deleteConcept(id) → Promise<void>`
@@ -196,17 +196,17 @@ Returns subjects with a count of how many concepts each contains:
 ```typescript
 const rows = await db
   .select({
-    ...subjects,
-    conceptCount: count(conceptSubjects.conceptId),
+    ...getTableColumns(subjects),
+    conceptCount: sql<number>`count(${concepts.id})::int`,
   })
   .from(subjects)
-  .leftJoin(conceptSubjects, eq(conceptSubjects.subjectId, subjects.id))
+  .leftJoin(concepts, and(eq(concepts.subjectId, subjects.id), eq(concepts.userId, userId)))
   .where(eq(subjects.userId, userId))
   .groupBy(subjects.id)
   .orderBy(asc(subjects.name))
 ```
 
-LEFT JOIN is important: subjects with zero concepts still appear (count = 0).
+LEFT JOIN on `subject_id` (direct FK): subjects with zero concepts still appear (count = 0). The `concepts.userId` guard prevents cross-user contamination.
 
 #### `getTopics() → Promise<Topic[]>`
 
@@ -391,29 +391,32 @@ async function resolveOrCreate(
 
 The `onConflictDoNothing()` handles race conditions: if two concurrent requests try to create the same subject simultaneously, only one wins and the other is silently ignored. Then both fetch the existing ID.
 
-### `attachJunctions(userId, conceptIds) → Promise<Map>`
+### `attachTagJunctions(userId, conceptIds) → Promise<Map>`
 
-Batch-fetches all M:M junction rows for a list of concept IDs in parallel. Only subjects and tags use junction tables — topics and subtopics are direct FKs on the concept row and are not fetched here.
+Batch-fetches all tag junction rows for a list of concept IDs. Tags are the only remaining M:M relationship — subjects, topics, and subtopics are now all direct FKs on the concept row.
 
 ```typescript
-const [subjectRows, tagRows] = await Promise.all([
-  db.select().from(conceptSubjects).where(inArray(conceptSubjects.conceptId, conceptIds)),
-  db.select().from(conceptTags).where(inArray(conceptTags.conceptId, conceptIds)),
-])
+const tagRows = await db
+  .select()
+  .from(conceptTags)
+  .where(inArray(conceptTags.conceptId, conceptIds))
 
-// Build Map<conceptId, { subjectIds, tagIds }>
+// Build Map<conceptId, { tagIds }>
 ```
 
-This avoids N+1 queries — all junctions for all concepts are fetched in 2 queries total.
+This avoids N+1 queries — all tag junctions for all concepts are fetched in a single query.
 
 ### `pruneOrphans(userId) → Promise<void>`
 
 Deletes subjects, topics, subtopics, and tags no longer referenced by any concept:
 
 ```typescript
-// Delete subjects where no conceptSubjects row references them
+// Delete subjects not referenced by any concept's subject_id (direct FK — same pattern as topics)
+const usedSubjectIds = db.selectDistinct({ subjectId: concepts.subjectId })
+  .from(concepts)
+  .where(and(eq(concepts.userId, userId), isNotNull(concepts.subjectId)))
 await db.delete(subjects).where(
-  and(eq(subjects.userId, userId), notInArray(subjects.id, ...conceptSubjects subquery))
+  and(eq(subjects.userId, userId), sql`${subjects.id} NOT IN (${usedSubjectIds})`)
 )
 // Delete topics not referenced by any concept's topic_id
 await db.delete(topics).where(
@@ -428,7 +431,7 @@ await db.delete(topics).where(
   )
 )
 // Same pattern for subtopics (subtopic_id column)
-// Same pattern for tags (concept_tags junction)
+// Tags: notInArray against concept_tags junction
 // All four run in parallel with Promise.all
 ```
 

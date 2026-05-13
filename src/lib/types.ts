@@ -47,14 +47,14 @@ export interface Concept {
   pinned: boolean
   createdAt: Date
   updatedAt: Date
-  // Joined fields (populated by query, not stored in concepts table)
-  subjectIds: string[]
-  tagIds: string[]
   // Direct FK fields (stored on concepts table)
+  subjectId: string | null
   topicId: string | null
   subtopicId: string | null
-  // Joined name fields (populated by getConcept single-concept query)
-  subjectNames?: string[]
+  // Joined fields (populated by query, not stored in concepts table)
+  tagIds: string[]
+  // Name fields (populated by getConcept single-concept query)
+  subjectName?: string | null
   tagNames?: string[]
   topicName?: string | null
   subtopicName?: string | null
@@ -71,7 +71,7 @@ export interface StudySession {
 // Input types for mutations (names not IDs — server resolves/creates)
 export interface ConceptInput {
   name: string
-  subjectNames: string[]
+  subjectName: string | null
   topicName: string | null
   subtopicName: string | null
   tagNames: string[]

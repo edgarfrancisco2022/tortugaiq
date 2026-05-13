@@ -409,6 +409,7 @@ function SubjectLink({
   return (
     <Link
       href={href}
+      prefetch={true}
       onClick={(e) => {
         sessionStorage.removeItem('cv-back')
         ;(window as any).__cvBackPending = false

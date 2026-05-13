@@ -179,6 +179,7 @@ export const concepts = pgTable('concepts', {
     .default('MEDIUM'),
   reviewCount: integer('review_count').notNull().default(0),
   pinned: boolean('pinned').notNull().default(false),
+  subjectId: text('subject_id').references(() => subjects.id, { onDelete: 'set null' }),
   topicId: text('topic_id').references(() => topics.id, { onDelete: 'set null' }),
   subtopicId: text('subtopic_id').references(() => subtopics.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -186,19 +187,6 @@ export const concepts = pgTable('concepts', {
 })
 
 // M:M junction tables
-
-export const conceptSubjects = pgTable(
-  'concept_subjects',
-  {
-    conceptId: text('concept_id')
-      .notNull()
-      .references(() => concepts.id, { onDelete: 'cascade' }),
-    subjectId: text('subject_id')
-      .notNull()
-      .references(() => subjects.id, { onDelete: 'cascade' }),
-  },
-  (t) => [primaryKey({ columns: [t.conceptId, t.subjectId] })]
-)
 
 export const conceptTags = pgTable(
   'concept_tags',

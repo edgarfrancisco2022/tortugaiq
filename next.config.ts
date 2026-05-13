@@ -11,6 +11,11 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ['nodemailer'],
+  experimental: {
+    staleTimes: {
+      dynamic: 30,
+    },
+  },
   async headers() {
     return [
       {

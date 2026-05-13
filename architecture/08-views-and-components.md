@@ -234,7 +234,7 @@ Modal for creating and editing concepts.
 
 **Fields:**
 - Name (text input, required)
-- Subjects (CreatableMultiSelect — can create new subjects inline, multi-select)
+- Subject (CreatableMultiSelect — single-select; can create new subject inline; required)
 - Topic (CreatableMultiSelect, single-select)
 - Subtopic (CreatableMultiSelect, single-select — **disabled unless a Topic is selected**)
 - Tags (CreatableMultiSelect, multi-select)
