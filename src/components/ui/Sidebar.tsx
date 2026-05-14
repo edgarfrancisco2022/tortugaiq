@@ -320,22 +320,24 @@ export default function Sidebar({
 
         {/* Subjects — hidden when collapsed */}
         {!collapsed && (
-          <div className="flex-1 overflow-y-auto overscroll-none px-3 pt-3">
+          <div className="flex-1 overflow-hidden flex flex-col px-3 pt-3">
             {sorted.length > 0 && (
               <>
                 <p
-                  className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1"
+                  className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1 flex-shrink-0"
                   aria-hidden="true"
                 >
                   Subjects
                 </p>
-                {sorted.map((subject) => (
-                  <SubjectLink
-                    key={subject.id}
-                    subject={subject}
-                    onMobileClose={onMobileClose}
-                  />
-                ))}
+                <div className="overflow-y-auto overscroll-none flex-1">
+                  {sorted.map((subject) => (
+                    <SubjectLink
+                      key={subject.id}
+                      subject={subject}
+                      onMobileClose={onMobileClose}
+                    />
+                  ))}
+                </div>
               </>
             )}
           </div>

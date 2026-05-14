@@ -123,11 +123,12 @@ export default function InlineEditor({
               </ReactMarkdown>
             </div>
           ) : (
-            <div>
-              <p className="text-xs text-gray-400 italic m-0">
-                {placeholder || 'No MVK notes. Click Edit to add.'}
-              </p>
-              {hint}
+            <div className="prose prose-sm prose-neutral max-w-none">
+              {hint ?? (
+                <p className="text-xs text-gray-400 italic m-0">
+                  {placeholder || 'No MVK notes. Click Edit to add.'}
+                </p>
+              )}
             </div>
           )}
         </div>

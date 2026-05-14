@@ -7,7 +7,7 @@ import { useConcept, useUpdateConceptField, useUpdateConceptContent, useIncremen
 import { useConceptForm } from '@/components/providers/ConceptFormProvider'
 import { useDirtyState } from '@/components/providers/DirtyStateProvider'
 import ConceptLoading from './loading'
-import MarkdownEditor, { MVK_PLACEHOLDER, MVK_EXAMPLE_HINT, MVK_EDIT_PLACEHOLDER } from '@/components/ui/MarkdownEditor'
+import MarkdownEditor, { MVK_GUIDANCE_DISPLAY, MVK_EDIT_PLACEHOLDER } from '@/components/ui/MarkdownEditor'
 import { StateSelector, PriorityBadge, ReviewCounter, PinButton } from '@/components/ui/StatusBadge'
 import ShortcutsHintBar from '@/components/ui/ShortcutsHintBar'
 
@@ -187,8 +187,7 @@ export default function ConceptView() {
         <MarkdownEditor
           key={`${conceptId}-mvk`}
           content={concept.mvkNotes ?? ''}
-          placeholder={MVK_PLACEHOLDER}
-          hint={MVK_EXAMPLE_HINT}
+          hint={MVK_GUIDANCE_DISPLAY}
           editPlaceholder={MVK_EDIT_PLACEHOLDER}
           onSave={(value) => updateContentMut.mutate({ id: conceptId, field: 'mvkNotes', value })}
         />

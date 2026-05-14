@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import InlineEditor from './InlineEditor'
-import { MVK_PLACEHOLDER, MVK_EXAMPLE_HINT, MVK_EDIT_PLACEHOLDER } from './MarkdownEditor'
+import { MVK_GUIDANCE_DISPLAY, MVK_EDIT_PLACEHOLDER } from './MarkdownEditor'
 
 const STORAGE_KEY = 'mvk-panel-height'
 const DEFAULT_HEIGHT = 128  // px — matches old max-h-32
@@ -105,8 +105,7 @@ export default function MvkDrawer({
             <InlineEditor
               key={focusedConcept.id}
               content={focusedConcept.mvkNotes ?? ''}
-              placeholder={MVK_PLACEHOLDER}
-              hint={MVK_EXAMPLE_HINT}
+              hint={MVK_GUIDANCE_DISPLAY}
               editPlaceholder={MVK_EDIT_PLACEHOLDER}
               onSave={onSave}
               isEditing={isEditing}

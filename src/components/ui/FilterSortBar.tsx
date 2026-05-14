@@ -79,33 +79,79 @@ function MultiSelectFilter({
   selected,
   onToggle,
   onClear,
+  searchable = false,
 }: {
   label: string
   options: FilterOption[]
   selected: string[]
   onToggle: (v: string) => void
   onClear: () => void
+  searchable?: boolean
 }) {
   const [open, setOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const ref = useRef<HTMLDivElement>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
   const listId = `msf-${label.toLowerCase()}-list`
 
   useEffect(() => {
     if (!open) return
     function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false)
+        setSearchQuery('')
+      }
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
 
+  useEffect(() => {
+    if (open && searchable) {
+      setTimeout(() => searchRef.current?.focus(), 0)
+    }
+  }, [open, searchable])
+
   const isActive = selected.length > 0
   const btnLabel = isActive ? `${label} · ${selected.length}` : label
+  const q = searchQuery.toLowerCase()
+
+  const visibleOptions = (() => {
+    if (!searchable || !q) return options
+    const selectedOpts = options.filter((o) => selected.includes(o.value))
+    const unselectedMatches = options.filter(
+      (o) => !selected.includes(o.value) && o.label.toLowerCase().includes(q)
+    )
+    return { selectedOpts, unselectedMatches }
+  })()
+
+  function renderOption(opt: FilterOption) {
+    const checked = selected.includes(opt.value)
+    return (
+      <button
+        key={opt.value}
+        onClick={() => onToggle(opt.value)}
+        className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-left transition-colors ${
+          checked ? 'text-blue-700 bg-blue-50/60' : 'text-gray-700 hover:bg-gray-50'
+        }`}
+      >
+        <span
+          className={`w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0 transition-all ${
+            checked ? 'border-blue-400 bg-blue-500' : 'border-gray-300'
+          }`}
+        >
+          {checked && <Checkmark />}
+        </span>
+        {opt.dot && <span className={`w-2 h-2 rounded-full flex-shrink-0 ${opt.dot}`} />}
+        <span className="truncate">{opt.label}</span>
+      </button>
+    )
+  }
 
   return (
     <div className="relative" ref={ref}>
       <button
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => { if (open) setSearchQuery(''); setOpen((o) => !o) }}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={listId}
@@ -126,48 +172,85 @@ function MultiSelectFilter({
           role="listbox"
           aria-label={`${label} options`}
           aria-multiselectable="true"
-          className="absolute top-full left-0 mt-1.5 bg-white border border-gray-100 rounded-xl shadow-xl z-50 py-1.5 min-w-[152px] overflow-hidden"
+          className="absolute top-full left-0 mt-1.5 bg-white border border-gray-100 rounded-xl shadow-xl z-50 min-w-[180px] overflow-hidden"
         >
-          <button
-            onClick={onClear}
-            className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-left transition-colors ${
-              !isActive ? 'text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-50'
-            }`}
-          >
-            <span
-              className={`w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0 transition-all ${
-                !isActive ? 'border-blue-400 bg-blue-500' : 'border-gray-300'
+          {searchable && (
+            <div className="px-2.5 pt-2 pb-1">
+              <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1">
+                <svg className="w-3 h-3 text-gray-400 flex-shrink-0" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <circle cx="5" cy="5" r="3.5" />
+                  <path d="M8 8l2 2" strokeLinecap="round" />
+                </svg>
+                <input
+                  ref={searchRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search..."
+                  className="flex-1 text-xs bg-transparent outline-none text-gray-700 placeholder-gray-400 min-w-0"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => { setSearchQuery(''); searchRef.current?.focus() }}
+                    className="text-gray-400 hover:text-gray-600 flex-shrink-0"
+                    aria-label="Clear search"
+                  >
+                    <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8">
+                      <path d="M3 3l6 6M9 3l-6 6" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="py-1">
+            <button
+              onClick={onClear}
+              className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-left transition-colors ${
+                !isActive ? 'text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-50'
               }`}
             >
-              {!isActive && <Checkmark />}
-            </span>
-            All
-          </button>
-
-          <div className="h-px bg-gray-100 my-1 mx-2" />
-
-          {options.map((opt) => {
-            const checked = selected.includes(opt.value)
-            return (
-              <button
-                key={opt.value}
-                onClick={() => onToggle(opt.value)}
-                className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-left transition-colors ${
-                  checked ? 'text-blue-700 bg-blue-50/60' : 'text-gray-700 hover:bg-gray-50'
+              <span
+                className={`w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0 transition-all ${
+                  !isActive ? 'border-blue-400 bg-blue-500' : 'border-gray-300'
                 }`}
               >
-                <span
-                  className={`w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0 transition-all ${
-                    checked ? 'border-blue-400 bg-blue-500' : 'border-gray-300'
-                  }`}
-                >
-                  {checked && <Checkmark />}
-                </span>
-                {opt.dot && <span className={`w-2 h-2 rounded-full flex-shrink-0 ${opt.dot}`} />}
-                <span className="truncate">{opt.label}</span>
-              </button>
-            )
-          })}
+                {!isActive && <Checkmark />}
+              </span>
+              All
+            </button>
+
+            <div className="h-px bg-gray-100 my-1 mx-2" />
+
+            <div
+              className="overflow-y-auto max-h-60"
+              style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}
+            >
+              {searchable && q ? (
+                (() => {
+                  const { selectedOpts, unselectedMatches } = visibleOptions as {
+                    selectedOpts: FilterOption[]
+                    unselectedMatches: FilterOption[]
+                  }
+                  return (
+                    <>
+                      {selectedOpts.map(renderOption)}
+                      {selectedOpts.length > 0 && unselectedMatches.length > 0 && (
+                        <div className="h-px bg-gray-100 my-1 mx-2" />
+                      )}
+                      {unselectedMatches.map(renderOption)}
+                      {selectedOpts.length === 0 && unselectedMatches.length === 0 && (
+                        <p className="px-3 py-2 text-xs text-gray-400 italic">No matches</p>
+                      )}
+                    </>
+                  )
+                })()
+              ) : (
+                (visibleOptions as FilterOption[]).map(renderOption)
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -255,6 +338,7 @@ export default function FilterSortBar({
           selected={filters.subjects || []}
           onToggle={(v) => toggle('subjects', v)}
           onClear={() => setFilter('subjects', [])}
+          searchable
         />
       )}
 
@@ -265,6 +349,7 @@ export default function FilterSortBar({
           selected={filters.topics || []}
           onToggle={(v) => toggle('topics', v)}
           onClear={() => setFilter('topics', [])}
+          searchable
         />
       )}
 
@@ -275,6 +360,7 @@ export default function FilterSortBar({
           selected={filters.subtopics || []}
           onToggle={(v) => toggle('subtopics', v)}
           onClear={() => setFilter('subtopics', [])}
+          searchable
         />
       )}
 
@@ -285,6 +371,7 @@ export default function FilterSortBar({
           selected={filters.tags || []}
           onToggle={(v) => toggle('tags', v)}
           onClear={() => setFilter('tags', [])}
+          searchable
         />
       )}
 

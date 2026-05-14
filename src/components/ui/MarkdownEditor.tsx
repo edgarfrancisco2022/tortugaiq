@@ -6,22 +6,42 @@ import MarkdownHelpPanel from './MarkdownHelpPanel'
 import { useDirtyState } from '@/components/providers/DirtyStateProvider'
 import { MD_PLUGINS, mdComponents } from '@/lib/md-config'
 
-export const MVK_PLACEHOLDER = `Write the smallest useful representation of this concept in your own words. Keep it tiny, intuitive and easy to remember: a simple example, a couple keywords, a micro synthesis, a mini diagram, an image...`
+export const MVK_EDIT_PLACEHOLDER = `The MVK should help your future self quickly recover the idea without rereading your notes or researching it all over again.
 
-export const MVK_EDIT_PLACEHOLDER = `Write the smallest useful representation of this concept in your own words. Keep it tiny, intuitive and easy to remember: a simple example, a couple keywords, a micro synthesis, a mini diagram, an image...
+Suggested structure:
 
-Example — Concept Name: "Photosynthesis"  →  MVK: "sunlight + water + CO₂ = sugar + oxygen"`
+  Index — The smallest useful reminder of the concept.
+  Context — The background needed to understand the concept again if you forget it.
+  Intuition — A simple example, diagram, analogy, image, or mental model that makes it click again.
 
-export const MVK_EXAMPLE_HINT = (
-  <p className="text-xs m-0 mt-2 not-italic">
-    <span className="text-gray-400">
-      Example — Concept Name: &quot;Photosynthesis&quot; →
-    </span>{' '}
-    <span className="text-gray-500 font-medium">MVK:</span>{' '}
-    <span className="text-gray-600 font-medium">
-      &quot;sunlight + water + CO₂ = sugar + oxygen&quot;
-    </span>
-  </p>
+Keep it compact. Use Notes for deeper explanations.`
+
+export const MVK_GUIDANCE_DISPLAY = (
+  <div className="py-1 space-y-4">
+    <p className="text-sm text-gray-500 leading-relaxed m-0">
+      The <span className="font-semibold text-gray-600">MVK</span> should help your future self quickly recover the concept without rereading your notes or researching it all over again.
+    </p>
+    <div className="space-y-3">
+      <p className="text-[11px] text-gray-400 uppercase tracking-widest m-0 font-medium">Suggested structure</p>
+      <div className="pl-3 border-l-2 border-blue-200">
+        <span className="text-[11px] font-semibold uppercase tracking-widest text-blue-500">Index</span>
+        <p className="text-xs text-gray-400 m-0 mt-0.5 leading-relaxed">The smallest useful reminder of the concept.</p>
+      </div>
+      <div className="pl-3 border-l-2 border-blue-200">
+        <span className="text-[11px] font-semibold uppercase tracking-widest text-blue-500">Context</span>
+        <p className="text-xs text-gray-400 m-0 mt-0.5 leading-relaxed">The background needed to understand the concept again if you forget it.</p>
+      </div>
+      <div className="pl-3 border-l-2 border-blue-200">
+        <span className="text-[11px] font-semibold uppercase tracking-widest text-blue-500">Intuition</span>
+        <p className="text-xs text-gray-400 m-0 mt-0.5 leading-relaxed">A simple example, diagram, analogy, image, or mental model that makes it click again.</p>
+      </div>
+    </div>
+    <div className="border-t border-gray-100 pt-3">
+      <p className="text-xs text-gray-400 m-0 leading-relaxed">
+        Keep it compact. Use <span className="font-medium text-gray-500">Notes</span> for deeper explanations.
+      </p>
+    </div>
+  </div>
 )
 
 interface Props {
@@ -124,10 +144,11 @@ export default function MarkdownEditor({
             </ReactMarkdown>
           ) : (
             <div>
-              <p className="text-gray-400 italic text-sm m-0">
-                {placeholder || 'No content yet. Click Edit to add.'}
-              </p>
-              {hint}
+              {hint ?? (
+                <p className="text-gray-400 italic text-sm m-0">
+                  {placeholder || 'No content yet. Click Edit to add.'}
+                </p>
+              )}
             </div>
           )}
         </div>
