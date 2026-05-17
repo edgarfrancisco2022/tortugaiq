@@ -10,7 +10,7 @@ import { useViewStateRegistry } from '@/components/providers/ViewStateRegistryPr
 import FilterSortBar from '@/components/ui/FilterSortBar'
 import ShortcutsHintBar from '@/components/ui/ShortcutsHintBar'
 import { StateSelector, PriorityBadge, ReviewCounter, PinButton, PinIcon } from '@/components/ui/StatusBadge'
-import MarkdownEditor, { MVK_GUIDANCE_DISPLAY, MVK_EDIT_PLACEHOLDER } from '@/components/ui/MarkdownEditor'
+import MarkdownEditor, { MVK_GUIDANCE_DISPLAY, MVK_EDIT_PLACEHOLDER, NOTES_GUIDANCE_DISPLAY, NOTES_EDIT_PLACEHOLDER } from '@/components/ui/MarkdownEditor'
 import type { FilterState } from '@/hooks/useFilterSort'
 
 const SCROLL_KEY = 'scroll-focus'
@@ -369,7 +369,8 @@ function FocusMode() {
                 <RevealSection title="Notes">
                   <MarkdownEditor
                     content={concept.markdownNotes ?? ''}
-                    placeholder="Add meaningful notes, interesting intuitions, or hard-won insights you may want to revisit later..."
+                    hint={NOTES_GUIDANCE_DISPLAY}
+                    editPlaceholder={NOTES_EDIT_PLACEHOLDER}
                     onSave={(value) => updateContentMut.mutate({ id: concept.id, field: 'markdownNotes', value })}
                   />
                 </RevealSection>

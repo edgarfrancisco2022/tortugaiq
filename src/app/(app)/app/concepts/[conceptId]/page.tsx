@@ -7,7 +7,7 @@ import { useConcept, useUpdateConceptField, useUpdateConceptContent, useIncremen
 import { useConceptForm } from '@/components/providers/ConceptFormProvider'
 import { useDirtyState } from '@/components/providers/DirtyStateProvider'
 import ConceptLoading from './loading'
-import MarkdownEditor, { MVK_GUIDANCE_DISPLAY, MVK_EDIT_PLACEHOLDER } from '@/components/ui/MarkdownEditor'
+import MarkdownEditor, { MVK_GUIDANCE_DISPLAY, MVK_EDIT_PLACEHOLDER, NOTES_GUIDANCE_DISPLAY, NOTES_EDIT_PLACEHOLDER, REFS_GUIDANCE_DISPLAY, REFS_EDIT_PLACEHOLDER } from '@/components/ui/MarkdownEditor'
 import { StateSelector, PriorityBadge, ReviewCounter, PinButton } from '@/components/ui/StatusBadge'
 import ShortcutsHintBar from '@/components/ui/ShortcutsHintBar'
 
@@ -197,7 +197,8 @@ export default function ConceptView() {
         <MarkdownEditor
           key={`${conceptId}-notes`}
           content={concept.markdownNotes ?? ''}
-          placeholder="Add meaningful notes, interesting intuitions, or hard-won insights you may want to revisit later..."
+          hint={NOTES_GUIDANCE_DISPLAY}
+          editPlaceholder={NOTES_EDIT_PLACEHOLDER}
           onSave={(value) => updateContentMut.mutate({ id: conceptId, field: 'markdownNotes', value })}
         />
       </Section>
@@ -206,7 +207,8 @@ export default function ConceptView() {
         <MarkdownEditor
           key={`${conceptId}-refs`}
           content={concept.referencesMarkdown ?? ''}
-          placeholder="Add URLs, book references, page numbers, or any source material..."
+          hint={REFS_GUIDANCE_DISPLAY}
+          editPlaceholder={REFS_EDIT_PLACEHOLDER}
           onSave={(value) => updateContentMut.mutate({ id: conceptId, field: 'referencesMarkdown', value })}
         />
       </Section>

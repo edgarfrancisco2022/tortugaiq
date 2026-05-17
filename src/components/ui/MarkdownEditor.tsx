@@ -14,7 +14,71 @@ Suggested structure:
   Context — The background needed to understand the concept again if you forget it.
   Intuition — A simple example, diagram, analogy, image, or mental model that makes it click again.
 
-Keep it compact. Use Notes for deeper explanations.`
+Keep it compact for quick recovery. Use Notes for deeper explanations.`
+
+export const NOTES_EDIT_PLACEHOLDER = `Use Notes to preserve the deeper understanding.
+
+Suggested structure:
+
+  Core — The meaning or reasoning behind the concept.
+  Context — The larger background needed to understand the concept in depth.
+  Intuition — Examples, diagrams, analogies, images, or mental models that make the concept clear.
+
+Save the explanation that helped the concept make sense.`
+
+export const REFS_EDIT_PLACEHOLDER = `Use References to save source material.
+
+Suggested structure:
+
+  Source — Author, book, article, video, website, or other reference material.
+  Location — Page number, section, timestamp, URL, etc.`
+
+export const REFS_GUIDANCE_DISPLAY = (
+  <div className="py-1 space-y-4">
+    <p className="text-sm text-gray-500 leading-relaxed m-0">
+      Use <span className="font-semibold text-gray-600">References</span> to save source material.
+    </p>
+    <div className="space-y-3">
+      <p className="text-[11px] text-gray-400 uppercase tracking-widest m-0 font-medium">Suggested structure</p>
+      <div className="pl-3 border-l-2 border-orange-200">
+        <span className="text-[11px] font-semibold uppercase tracking-widest text-orange-400">Source</span>
+        <p className="text-xs text-gray-400 m-0 mt-0.5 leading-relaxed">Author, book, article, video, website, or other reference material.</p>
+      </div>
+      <div className="pl-3 border-l-2 border-orange-200">
+        <span className="text-[11px] font-semibold uppercase tracking-widest text-orange-400">Location</span>
+        <p className="text-xs text-gray-400 m-0 mt-0.5 leading-relaxed">Page number, section, timestamp, URL, etc.</p>
+      </div>
+    </div>
+  </div>
+)
+
+export const NOTES_GUIDANCE_DISPLAY = (
+  <div className="py-1 space-y-4">
+    <p className="text-sm text-gray-500 leading-relaxed m-0">
+      Use <span className="font-semibold text-gray-600">Notes</span> to preserve the deeper understanding.
+    </p>
+    <div className="space-y-3">
+      <p className="text-[11px] text-gray-400 uppercase tracking-widest m-0 font-medium">Suggested structure</p>
+      <div className="pl-3 border-l-2 border-emerald-200">
+        <span className="text-[11px] font-semibold uppercase tracking-widest text-emerald-500">Core</span>
+        <p className="text-xs text-gray-400 m-0 mt-0.5 leading-relaxed">The meaning or reasoning behind the concept.</p>
+      </div>
+      <div className="pl-3 border-l-2 border-emerald-200">
+        <span className="text-[11px] font-semibold uppercase tracking-widest text-emerald-500">Context</span>
+        <p className="text-xs text-gray-400 m-0 mt-0.5 leading-relaxed">The larger background needed to understand the concept in depth.</p>
+      </div>
+      <div className="pl-3 border-l-2 border-emerald-200">
+        <span className="text-[11px] font-semibold uppercase tracking-widest text-emerald-500">Intuition</span>
+        <p className="text-xs text-gray-400 m-0 mt-0.5 leading-relaxed">Examples, diagrams, analogies, images, or mental models that make the concept clear.</p>
+      </div>
+    </div>
+    <div className="border-t border-gray-100 pt-3">
+      <p className="text-xs text-gray-400 m-0 leading-relaxed">
+        Save the explanation that helped the concept make sense.
+      </p>
+    </div>
+  </div>
+)
 
 export const MVK_GUIDANCE_DISPLAY = (
   <div className="py-1 space-y-4">
@@ -38,7 +102,7 @@ export const MVK_GUIDANCE_DISPLAY = (
     </div>
     <div className="border-t border-gray-100 pt-3">
       <p className="text-xs text-gray-400 m-0 leading-relaxed">
-        Keep it compact. Use <span className="font-medium text-gray-500">Notes</span> for deeper explanations.
+        Keep it compact for quick recovery. Use <span className="font-medium text-gray-500">Notes</span> for deeper explanations.
       </p>
     </div>
   </div>
@@ -177,7 +241,7 @@ export default function MarkdownEditor({
         <div className="flex items-center gap-3">
           <button
             onClick={() => setShowHelp(true)}
-            className="text-xs text-gray-400 hover:text-gray-600 font-medium transition-colors"
+            className="text-xs text-gray-400 hover:text-emerald-500 font-medium transition-colors"
             aria-label="Markdown Help"
             title="Markdown Help"
           >
